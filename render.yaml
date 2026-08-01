@@ -1,0 +1,44 @@
+services:
+  # Frontend: Vite/React/Cesium static site
+  - type: web
+    name: gvi-frontend
+    runtime: static
+    rootDir: .
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_CESIUM_ION_TOKEN
+        sync: false
+      - key: VITE_BALCONY_API_URL
+        sync: false
+      - key: VITE_BALCONY_ADMIN_TOKEN
+        sync: false
+      - key: VITE_ENABLE_BALCONY_DEBUG
+        value: "false"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # Backend: Express API (balcony viewpoint generation + GVI analysis)
+  - type: web
+    name: gvi-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: "4100"
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: BALCONY_FRONTEND_URL
+        sync: false
+      - key: BALCONY_STORAGE_DIR
+        value: ./storage
+      - key: BALCONY_CAPTURE_TIMEOUT_MS
+        value: "60000"

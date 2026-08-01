@@ -629,6 +629,14 @@ export function BalconyViewpointNavigator({
             feature,
           });
 
+          // Reflect this window in the leaderboard/gallery immediately
+          // rather than waiting for the whole 100-window scan to finish —
+          // otherwise the modal sits on "No scan data yet" and the gallery
+          // shows stale/no previews for the entire run.
+          const sortedSoFar = [...results].sort((a, b) => b.gviScore - a.gviScore);
+          setGviScanResults(sortedSoFar);
+          saveGviScanResults(sortedSoFar);
+
           if (isSaved) {
             updatedFeaturesById.set(feature.properties.id, {
               ...feature,
@@ -639,6 +647,10 @@ export function BalconyViewpointNavigator({
                 gviScore: result.gviScore,
               },
             });
+            const nextFeatures = collection.features.map(
+              (feat) => updatedFeaturesById.get(feat.properties.id) ?? feat
+            );
+            onPersistCollection({ ...collection, features: nextFeatures });
           }
 
           // Persisted to the backend (Postgres) immediately, one window at
@@ -664,6 +676,11 @@ export function BalconyViewpointNavigator({
               greyPixels: result.greyPixelCount ?? result.totalPixelCount - result.greenPixelCount,
               totalPixels: result.totalPixelCount,
             });
+            // Pulls the just-saved row straight back from the backend so the
+            // gallery's "remote" preview (which wins over the local one) is
+            // confirmed to be coming from the database, not just the local
+            // capture above.
+            void refreshRemoteViewpoints();
           } catch (err) {
             console.warn(`Failed to persist GVI scan result for F${f}-${s}-${b} to the backend:`, err);
           }
@@ -671,15 +688,7 @@ export function BalconyViewpointNavigator({
         setGviScanProgress({ current: i + 1, total: stops.length });
       }
 
-      results.sort((a, b) => b.gviScore - a.gviScore);
-      setGviScanResults(results);
       setShowLeaderboardModal(true);
-      saveGviScanResults(results);
-
-      if (updatedFeaturesById.size > 0) {
-        const nextFeatures = collection.features.map((f) => updatedFeaturesById.get(f.properties.id) ?? f);
-        onPersistCollection({ ...collection, features: nextFeatures });
-      }
     } finally {
       setIsCalculatingGvi(false);
     }

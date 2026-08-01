@@ -1,0 +1,467 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.app-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Covers Cesium's default black deep-space skybox while terrain/imagery/
+   buildings are still loading — without this the first paint is just stars
+   on black until useCesium's setup() finishes. A faded light green (rather
+   than flat white) ties the background to the GVI leaf/greenery branding
+   instead of a plain blank page. */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcf2e1;
+}
+
+/* Shown instead of the spinner/logo if Cesium.Viewer construction itself
+   throws (see useCesium's initError) — a real WebGL/GPU-process failure,
+   not a "still loading" state, so this replaces the spinner rather than
+   sitting alongside it. */
+.loading-overlay__error {
+  max-width: 480px;
+  padding: 24px 28px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 24px rgba(27, 94, 32, 0.18);
+  text-align: center;
+}
+
+.loading-overlay__error-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #b3261e;
+  margin-bottom: 8px;
+}
+
+.loading-overlay__error-message {
+  font-size: 13px;
+  color: #444;
+  font-family: monospace;
+  background: #f4f4f4;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  word-break: break-word;
+}
+
+.loading-overlay__error-hint {
+  font-size: 13px;
+  color: #2e2e2e;
+  line-height: 1.5;
+}
+
+/* Wraps the logo so a spinner ring can be centered around it independently
+   of the logo's own size/animation. */
+.loading-overlay__logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A real animated spinner, distinct from the artwork's own static progress
+   ring — this one actually rotates, sitting right against the logo's own
+   circular backdrop (.loading-overlay__logo-circle, 360px) so it reads as
+   "spinning around the logo" rather than fighting with the art underneath.
+   CSS draws a border's ring INSIDE the element's box (border thickness is
+   subtracted inward from width/height), so for this ring's INNER edge to
+   land exactly on the 360px circle's outer edge with an 8px border: inner
+   radius 180 = width/2 - 8, i.e. width = 376. That earlier needed a bigger
+   gap (460px) only because the logo square wasn't clipped to its circle
+   yet and could visually poke into the gap — now that logo-circle clips
+   with overflow: hidden, the ring can sit flush against it safely.
+   Thicker and higher-contrast than the first pass (5px/0.15 opacity),
+   which was nearly invisible against the pale green background.
+   drop-shadow (not box-shadow, which would clip to whatever's underneath)
+   gives the ring a bit of visual lift. */
+.loading-overlay__spinner {
+  position: absolute;
+  width: 376px;
+  height: 376px;
+  border-radius: 50%;
+  border: 8px solid rgba(46, 125, 50, 0.25);
+  border-top-color: #1b5e20;
+  border-right-color: #1b5e20;
+  filter: drop-shadow(0 0 4px rgba(27, 94, 32, 0.35));
+  animation: loading-overlay-spin 1s linear infinite;
+}
+
+@keyframes loading-overlay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A circular backdrop for the (square) logo PNG, sized so the square fully
+   fits inside without cropping any of its art or the "GREEN VIEW INDEX"
+   text — for a square inscribed in a circle with no corners clipped, the
+   circle's diameter needs to be at least the square's diagonal
+   (side * sqrt(2)); at a 260px logo that's ~368px, so 360px circle / 260px
+   logo leaves a small margin at REST. But the logo pulses up to 1.03x
+   scale (.loading-overlay-pulse below), which alone would push its
+   corners past that margin partway through every cycle — overflow: hidden
+   is the actual guarantee that nothing, at any animation frame, ever pokes
+   outside the circle, rather than relying on getting the margin numbers
+   exactly right. This is what actually reads as "logo sitting inside the
+   spinner" — a square card (the previous version) always looked like it
+   was fighting the ring's circular shape rather than belonging inside it. */
+.loading-overlay__logo-circle {
+  position: relative;
+  width: 360px;
+  height: 360px;
+  max-width: 62vw;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 4px 24px rgba(27, 94, 32, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-overlay__logo-full {
+  position: relative;
+  width: 260px;
+  max-width: 44vw;
+  height: auto;
+  animation: loading-overlay-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes loading-overlay-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 0.92;
+  }
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 340px;
+  max-height: 100vh;
+  overflow-y: auto;
+  background: rgba(20, 24, 28, 0.92);
+  color: #eaeaea;
+  padding: 16px;
+  z-index: 10;
+}
+
+.sidebar h1 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sidebar-header h1 {
+  margin: 0 0 12px;
+}
+
+.minimize-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  background: #2a2f36;
+  color: #eaeaea;
+  border: 1px solid #444b54;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.minimize-btn:hover {
+  background: #384049;
+}
+
+.panel {
+  border: 1px solid #3a4048;
+  border-radius: 8px;
+  padding: 10px 12px 14px;
+  margin-bottom: 12px;
+}
+
+.panel legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9fd8a0;
+  padding: 0 6px;
+}
+
+.debug-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  display: inline-block;
+}
+
+.debug-status.locked {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
+.debug-status.drift {
+  background: rgba(244, 67, 54, 0.15);
+  color: #e57373;
+}
+
+.debug-table {
+  width: 100%;
+  font-size: 11px;
+  border-collapse: collapse;
+}
+
+.debug-table td {
+  padding: 2px 4px;
+  color: #cfd6dc;
+  font-variant-numeric: tabular-nums;
+}
+
+.debug-table td:first-child {
+  color: #9aa4ad;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.field input[type="number"],
+.field input[type="range"] {
+  width: 100%;
+}
+
+.button-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  background: #2a2f36;
+  color: #eaeaea;
+  border: 1px solid #444b54;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn.active {
+  background: #2e7d32;
+  border-color: #66bb6a;
+}
+
+.btn.primary {
+  width: 100%;
+  background: #1b5e20;
+  border-color: #2e7d32;
+  margin: 8px 0;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #9aa4ad;
+}
+
+.stat-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.status {
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin: 6px 0;
+}
+
+.status-info {
+  background: rgba(66, 133, 244, 0.15);
+  color: #90caf9;
+}
+
+.status-error {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ef9a9a;
+}
+
+.status-warning {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffe082;
+}
+
+.gvi-result {
+  margin-top: 8px;
+  border-top: 1px solid #3a4048;
+  padding-top: 8px;
+}
+
+.note {
+  font-size: 11px;
+  color: #9aa4ad;
+  line-height: 1.4;
+}
+
+.capture-preview {
+  width: 100%;
+  border-radius: 6px;
+  margin-top: 8px;
+  border: 1px solid #3a4048;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #c7cdd3;
+  margin: 8px 0;
+}
+
+.debug-toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 8px 0 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #2e7d32;
+  transition: width 0.15s ease-out;
+}
+
+.profile-table-wrap {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 8px;
+  border: 1px solid #3a4048;
+  border-radius: 6px;
+}
+
+.profile-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.profile-table th,
+.profile-table td {
+  text-align: left;
+  padding: 4px 8px;
+}
+
+.profile-table thead th {
+  position: sticky;
+  top: 0;
+  background: #20262c;
+  color: #9aa4ad;
+  font-weight: 600;
+}
+
+.profile-table tbody tr:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.profile-row-clickable {
+  cursor: pointer;
+}
+
+.profile-row-clickable:hover {
+  background: rgba(102, 187, 106, 0.12) !important;
+}
+
+.facade-thumb-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 8px 4px;
+}
+
+.facade-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.facade-thumb:hover img {
+  outline: 2px solid #66bb6a;
+}
+
+.facade-thumb img {
+  width: 100%;
+  border-radius: 4px;
+  border: 1px solid #3a4048;
+}
+
+.facade-thumb span {
+  font-size: 10px;
+  color: #cfd8dc;
+}

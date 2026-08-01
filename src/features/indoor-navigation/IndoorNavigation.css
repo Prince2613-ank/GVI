@@ -1,0 +1,127 @@
+.indoor-nav {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 60;
+  pointer-events: auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 20px;
+  background: rgba(18, 22, 20, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(90, 255, 120, 0.18);
+  box-shadow: 0 0 30px rgba(40, 255, 90, 0.12);
+  animation: indoor-nav-appear 200ms ease-out;
+}
+
+@keyframes indoor-nav-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.indoor-nav__pad {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 56px 56px 56px;
+  grid-template-rows: 56px 56px 56px;
+  gap: 12px;
+  place-content: center;
+  place-items: center;
+}
+
+.indoor-nav__btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(30, 36, 33, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  color: #6bffa0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+.indoor-nav__btn:hover {
+  border-color: rgba(90, 255, 120, 0.7);
+  box-shadow: 0 0 14px rgba(60, 255, 120, 0.35);
+}
+
+.indoor-nav__btn:active,
+.indoor-nav__btn.is-active {
+  background: rgba(60, 255, 120, 0.9);
+  color: #0c140f;
+  border-color: rgba(60, 255, 120, 0.9);
+  transform: scale(0.95);
+  box-shadow: 0 0 22px rgba(60, 255, 120, 0.6);
+}
+
+.indoor-nav__btn:focus-visible {
+  outline: 2px solid #6bffa0;
+  outline-offset: 2px;
+}
+
+.indoor-nav__icon {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+.indoor-nav__btn--up {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.indoor-nav__btn--left {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.indoor-nav__btn--rotate {
+  grid-column: 2;
+  grid-row: 2;
+  border-color: rgba(90, 255, 120, 0.4);
+}
+
+.indoor-nav__btn--right {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.indoor-nav__btn--down {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.indoor-nav__debug-toggle {
+  position: absolute;
+  top: -34px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9be8b0;
+  background: rgba(18, 22, 20, 0.72);
+  border: 1px solid rgba(90, 255, 120, 0.18);
+  border-radius: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.indoor-nav__debug-toggle input {
+  accent-color: #6bffa0;
+}

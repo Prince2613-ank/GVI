@@ -1,0 +1,29 @@
+{
+  "name": "green-view-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone backend for the Green View (cesium-demo) app: automated balcony viewpoint generation (Puppeteer-driven capture + GVI analysis), backed by Postgres. Independent from the digital-twin admin backend in /backend — shares only the same Postgres database via its own gv_-prefixed tables.",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "migrate:up": "node -r dotenv/config ./node_modules/node-pg-migrate/bin/node-pg-migrate up -m src/db/migrations --migration-file-language js --migrations-table gv_pgmigrations",
+    "migrate:down": "node -r dotenv/config ./node_modules/node-pg-migrate/bin/node-pg-migrate down -m src/db/migrations --migration-file-language js --migrations-table gv_pgmigrations"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.0",
+    "pg": "^8.22.0",
+    "puppeteer": "^23.0.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.0",
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.10.0",
+    "node-pg-migrate": "^7.6.1",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.0"
+  }
+}

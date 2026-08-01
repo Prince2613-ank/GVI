@@ -1,0 +1,1204 @@
+.balcony-viewpoint-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 230px;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
+  background: rgba(24, 30, 26, 0.96);
+  color: #eaeaea;
+  border: 1px solid #3a4840;
+  border-left: none;
+  border-radius: 0;
+  font-size: 12px;
+  z-index: 50;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.4);
+}
+
+.balcony-viewpoint-nav__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  color: #a5d6a7;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #3a4840;
+  cursor: move;
+  user-select: none;
+  border-radius: 0;
+}
+
+.balcony-viewpoint-nav .minimize-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.balcony-viewpoint-nav__body {
+  padding: 10px 12px 14px;
+}
+
+.balcony-viewpoint-nav .field-label {
+  display: block;
+  font-size: 11px;
+  color: #9aa4ad;
+  margin: 10px 0 4px;
+}
+
+.balcony-viewpoint-nav .floor-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.balcony-viewpoint-nav .floor-btn {
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  padding: 6px 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.balcony-viewpoint-nav .floor-btn.active {
+  background: #2e7d32;
+  border-color: #66bb6a;
+}
+
+.balcony-viewpoint-nav .radio-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.balcony-viewpoint-nav .btn {
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.balcony-viewpoint-nav .btn.active {
+  background: #2e7d32;
+  border-color: #66bb6a;
+}
+
+.balcony-viewpoint-nav .tour-btn {
+  width: 100%;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.balcony-viewpoint-nav .tour-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.balcony-viewpoint-nav .tour-direction-picker {
+  margin-bottom: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #46534b;
+  border-radius: 6px;
+}
+
+.balcony-viewpoint-nav .tour-direction-picker .button-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.balcony-viewpoint-nav .tour-direction-picker .button-row:first-of-type {
+  margin-top: 0;
+}
+
+.balcony-viewpoint-nav .tour-floor-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.balcony-viewpoint-nav .tour-floor-grid .btn {
+  padding: 5px 0;
+  font-size: 11px;
+}
+
+.balcony-viewpoint-nav .current-id {
+  font-family: monospace;
+  font-size: 15px;
+  color: #a5d6a7;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 8px;
+  margin: 10px 0 6px;
+  text-align: center;
+}
+
+.balcony-viewpoint-nav .status-badge {
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.balcony-viewpoint-nav .status-badge.saved {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
+.balcony-viewpoint-nav .status-badge.derived {
+  background: rgba(255, 183, 77, 0.15);
+  color: #ffb74d;
+}
+
+.balcony-viewpoint-nav .status-badge.missing {
+  background: rgba(244, 67, 54, 0.15);
+  color: #e57373;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__search {
+  width: 100%;
+  background: #1a241a;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.balcony-viewpoint-nav .balcony-gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #46534b;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__card:hover {
+  border-color: #66bb6a;
+  background: rgba(76, 175, 80, 0.08);
+}
+
+.balcony-viewpoint-nav .balcony-gallery__card.active {
+  border-color: #66bb6a;
+  background: rgba(76, 175, 80, 0.16);
+}
+
+.balcony-viewpoint-nav .balcony-gallery__preview-wrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__preview-image {
+  width: 100%;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  background: #10140f;
+}
+
+/* Always green — a red/yellow "low score" badge read as an alarm/error
+   rather than a GVI measurement. Green stays visually tied to "this is a
+   greenery metric" regardless of how high or low the actual number is. */
+.balcony-viewpoint-nav .balcony-gallery__gvi-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(139, 226, 139, 0.4);
+  color: #8be28b;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__preview-placeholder {
+  width: 100%;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  margin-bottom: 2px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__no-preview {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__no-preview span {
+  font-size: 10px;
+  color: #6b746c;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__generate-btn {
+  font-size: 10px;
+  padding: 3px 6px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__meta {
+  font-size: 10px;
+  color: #9aa4ad;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #eaeaea;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__subtitle {
+  font-size: 11px;
+  color: #9aa4ad;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__badge.saved {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__badge.derived {
+  background: rgba(255, 183, 77, 0.2);
+  color: #ffb74d;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__button-row {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.balcony-viewpoint-nav .balcony-gallery__go-btn,
+.balcony-viewpoint-nav .balcony-gallery__save-btn {
+  flex: 1;
+  padding: 5px 2px;
+  font-size: 10px;
+}
+
+.balcony-viewpoint-nav .go-btn {
+  width: 100%;
+  padding: 10px 0;
+  font-size: 13px;
+  font-weight: 600;
+  background: #1b5e20;
+  border-color: #2e7d32;
+}
+
+.balcony-viewpoint-nav .go-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.balcony-viewpoint-nav .note.error {
+  color: #e57373;
+  font-size: 11px;
+  margin: 6px 0 10px;
+}
+
+.balcony-viewpoint-nav .captured-preview {
+  margin-top: 8px;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.balcony-viewpoint-nav .captured-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.balcony-viewpoint-nav .captured-preview__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 12px;
+  font-weight: 600;
+  color: #a5d6a7;
+}
+
+.balcony-viewpoint-nav .captured-view-block {
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #46534b;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.balcony-viewpoint-nav .captured-view-block__placeholder {
+  padding: 24px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #6b746c;
+  border: 1px dashed #46534b;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.balcony-viewpoint-nav .captured-view-block__image {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid #46534b;
+  background: #10140f;
+}
+
+.balcony-viewpoint-nav .captured-view-block__image-wrap {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.balcony-viewpoint-nav .captured-view-block__overlay {
+  position: absolute;
+  inset: 0;
+  border: none;
+  pointer-events: none;
+}
+
+.balcony-viewpoint-nav .captured-view-block__overlay-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #9fe89f;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.balcony-viewpoint-nav .captured-view-block__meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.balcony-viewpoint-nav .captured-view-block__meta > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.balcony-viewpoint-nav .captured-view-block__meta span:first-child {
+  color: #9aa4ad;
+}
+
+.balcony-viewpoint-nav .captured-view-block__meta span:last-child {
+  color: #cfd6dc;
+  font-variant-numeric: tabular-nums;
+}
+
+.balcony-viewpoint-nav .debug-toggle,
+.paused-gvi-panel .debug-toggle {
+  width: 100%;
+  margin-top: 4px;
+  font-size: 11px;
+  text-align: left;
+}
+
+.balcony-viewpoint-nav .gvi-debug-panel,
+.paused-gvi-panel .gvi-debug-panel {
+  margin-top: 6px;
+  padding: 8px;
+  border-top: 1px solid #46534b;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  font-size: 11px;
+}
+
+.balcony-viewpoint-nav .gvi-debug-panel > div,
+.paused-gvi-panel .gvi-debug-panel > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.balcony-viewpoint-nav .gvi-debug-panel span:first-child,
+.paused-gvi-panel .gvi-debug-panel span:first-child {
+  color: #9aa4ad;
+}
+
+.balcony-viewpoint-nav .gvi-debug-panel span:last-child,
+.paused-gvi-panel .gvi-debug-panel span:last-child {
+  color: #cfd6dc;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Tour control bar (bottom-center, shown only while a tour is active) ── */
+.tour-control-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  width: 420px;
+  max-width: 90vw;
+  box-sizing: border-box;
+  background: rgba(18, 24, 20, 0.94);
+  border: 1px solid rgba(90, 255, 120, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #eaeaea;
+  font-size: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.tour-control-bar__status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #9be8b0;
+  margin-bottom: 8px;
+}
+
+.tour-control-bar__spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(155, 232, 176, 0.25);
+  border-top-color: #6bffa0;
+  animation: tour-control-bar-spin 0.9s linear infinite;
+}
+
+@keyframes tour-control-bar-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tour-control-bar__progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.tour-control-bar__progress-fill {
+  height: 100%;
+  background: #6bff9a;
+  transition: width 0.3s ease;
+}
+
+.tour-control-bar .tour-control-bar__buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Extra-specific selector + explicit width/margin resets: a global
+   `.btn.primary` rule elsewhere sets width:100% and a vertical margin,
+   which (depending on stylesheet load order) can win the specificity tie
+   against a plainer `.tour-control-bar__buttons .btn` rule and force
+   Resume onto its own full-width row, pushing Cancel Tour down. */
+.tour-control-bar .tour-control-bar__buttons .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  height: 40px;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.tour-control-bar .tour-control-bar__buttons .btn.primary {
+  background: #2e7d32;
+  border-color: #66bb6a;
+}
+
+.tour-control-bar .tour-control-bar__buttons .btn.danger {
+  background: #5d1f1f;
+  border-color: #8a3a3a;
+}
+
+/* ── Window details panel (top-right, shown while touring) ── */
+/* Stacks Window Details + the paused-tour Analyse GVI card vertically with
+   no manual overlap math — offset well below Cesium's own top-right toolbar
+   (home/layers buttons) and the building-name title bar so nothing sits on
+   top of anything else. */
+.top-right-overlay-stack {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 260px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.top-right-overlay-stack::-webkit-scrollbar {
+  width: 6px;
+}
+
+.top-right-overlay-stack::-webkit-scrollbar-thumb {
+  background: rgba(90, 255, 120, 0.3);
+  border-radius: 3px;
+}
+
+.window-details-panel {
+  width: 100%;
+  background: rgba(18, 24, 20, 0.94);
+  border: 1px solid rgba(90, 255, 120, 0.25);
+  border-radius: 10px;
+  color: #eaeaea;
+  font-size: 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.window-details-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #9be8b0;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(90, 255, 120, 0.2);
+}
+
+.window-details-panel__close {
+  background: none;
+  border: none;
+  color: #eaeaea;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+}
+
+.window-details-panel__body {
+  padding: 8px 10px;
+}
+
+.window-details-panel__body > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.window-details-panel__body > div:last-child {
+  border-bottom: none;
+}
+
+.window-details-panel__body span:first-child {
+  color: #9aa4ad;
+  flex-shrink: 0;
+}
+
+.window-details-panel__body span:last-child {
+  color: #cfd6dc;
+  text-align: right;
+}
+
+/* ── Compact "Analyse GVI" card shown only while the auto-tour is paused ── */
+.paused-gvi-panel {
+  width: 100%;
+  background: rgba(18, 24, 20, 0.94);
+  border: 1px solid rgba(90, 255, 120, 0.25);
+  border-radius: 10px;
+  color: #eaeaea;
+  font-size: 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.paused-gvi-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #9be8b0;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(90, 255, 120, 0.2);
+}
+
+.paused-gvi-panel__close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  background: transparent;
+  color: #9be8b0;
+  border: 1px solid rgba(90, 255, 120, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.paused-gvi-panel__close:hover {
+  background: rgba(90, 255, 120, 0.15);
+}
+
+.paused-gvi-panel__body {
+  padding: 10px;
+}
+
+.paused-gvi-panel__body .field-label {
+  font-size: 11px;
+  color: #9aa4ad;
+  margin-bottom: 6px;
+}
+
+.paused-gvi-panel__body .btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 7px 0;
+  font-size: 12px;
+}
+
+.paused-gvi-panel__preview {
+  width: 100%;
+  height: 90px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px dashed #46534b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paused-gvi-panel__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.paused-gvi-panel__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #6b746c;
+  font-size: 10px;
+}
+
+.paused-gvi-panel__placeholder-icon {
+  font-size: 20px;
+  opacity: 0.6;
+}
+
+.paused-gvi-panel__score {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9be8b0;
+}
+
+.paused-gvi-panel__mask {
+  width: 100%;
+  border-radius: 6px;
+  margin-top: 8px;
+  border: 1px solid #3a4048;
+}
+
+/* ── GVI ranking report: every window scanned, sorted greenest-first ── */
+.gvi-ranking-panel {
+  margin: 8px 0;
+  border: 1px solid #3a4048;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.gvi-ranking-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9be8b0;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #3a4048;
+}
+
+.gvi-ranking-panel__header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gvi-ranking-panel__saved-at {
+  font-size: 10px;
+  font-weight: 400;
+  color: #7c8a80;
+}
+
+.gvi-ranking-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.gvi-ranking-panel__rescan {
+  flex-shrink: 0;
+  background: transparent;
+  color: #9be8b0;
+  border: 1px solid rgba(90, 255, 120, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+.gvi-ranking-panel__rescan:hover {
+  background: rgba(90, 255, 120, 0.15);
+}
+
+.gvi-ranking-panel__rescan:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gvi-ranking-panel__close {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  background: transparent;
+  color: #9be8b0;
+  border: 1px solid rgba(90, 255, 120, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+}
+
+.gvi-ranking-panel__list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.gvi-ranking-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.gvi-ranking-panel__row:last-child {
+  border-bottom: none;
+}
+
+.gvi-ranking-panel__row:hover {
+  background: rgba(102, 187, 106, 0.1);
+}
+
+.gvi-ranking-panel__rank {
+  flex-shrink: 0;
+  width: 22px;
+  font-size: 11px;
+  color: #9aa4ad;
+  font-weight: 600;
+}
+
+.gvi-ranking-panel__thumb {
+  flex-shrink: 0;
+  width: 44px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #3a4048;
+}
+
+.gvi-ranking-panel__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gvi-ranking-panel__title {
+  font-size: 11px;
+  color: #cfd6dc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gvi-ranking-panel__score {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.gvi-ranking-panel__score.high {
+  color: #66bb6a;
+}
+
+.gvi-ranking-panel__score.mid {
+  color: #ffca28;
+}
+
+.gvi-ranking-panel__score.low {
+  color: #ef9a9a;
+}
+
+/* ── Navbar auto-navigation icon + floor-picker modal ── */
+/* Sits just left of the GVI leaderboard icon, same rounded/dark toolbar
+   styling — the "Auto Navigation" button + inline floor picker that used to
+   live inside the Balcony Viewpoints panel body now live entirely here. */
+.auto-nav-toggle {
+  position: fixed;
+  top: 6px;
+  right: 121px;
+  z-index: 120;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(38, 38, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #8be28b;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auto-nav-toggle:hover {
+  background: rgba(58, 58, 58, 0.95);
+  border-color: rgba(139, 226, 139, 0.5);
+}
+
+.auto-nav-toggle.active {
+  background: rgba(139, 226, 139, 0.18);
+  border-color: rgba(139, 226, 139, 0.6);
+  color: #eaeaea;
+}
+
+.auto-nav-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auto-nav-modal {
+  width: min(360px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: #14180f;
+  border: 1px solid rgba(90, 255, 120, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  color: #eaeaea;
+  overflow: hidden;
+}
+
+.auto-nav-modal__body {
+  padding: 14px 16px 16px;
+}
+
+/* ── Navbar leaderboard icon + full-screen leaderboard modal ── */
+/* Sits just left of Cesium's own top-right toolbar (home/base-layer-picker
+   buttons), matching its rounded/dark styling so it reads as part of the
+   same toolbar rather than a bolted-on extra. */
+.gvi-leaderboard-toggle {
+  position: fixed;
+  top: 6px;
+  right: 83px;
+  z-index: 120;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(38, 38, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffd54f;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gvi-leaderboard-toggle:hover {
+  background: rgba(58, 58, 58, 0.95);
+  border-color: rgba(255, 213, 79, 0.5);
+}
+
+.gvi-leaderboard-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gvi-leaderboard-modal {
+  width: min(560px, 92vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: #14180f;
+  border: 1px solid rgba(90, 255, 120, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  color: #eaeaea;
+  overflow: hidden;
+}
+
+.gvi-leaderboard-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffd54f;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(90, 255, 120, 0.2);
+}
+
+.gvi-leaderboard-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gvi-leaderboard-modal__sync-btn {
+  flex-shrink: 0;
+  background: rgba(139, 226, 139, 0.12);
+  color: #8be28b;
+  border: 1px solid rgba(139, 226, 139, 0.35);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.gvi-leaderboard-modal__sync-btn:hover {
+  background: rgba(139, 226, 139, 0.2);
+}
+
+.gvi-leaderboard-modal__sync-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gvi-leaderboard-modal__close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  line-height: 1;
+  background: transparent;
+  color: #eaeaea;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.gvi-leaderboard-modal__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.gvi-leaderboard-modal__saved-at {
+  padding: 6px 16px 0;
+  font-size: 11px;
+  color: #7c8a80;
+}
+
+.gvi-leaderboard-modal__delete-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 0;
+  font-size: 11px;
+  color: #9aa4ad;
+}
+
+.gvi-leaderboard-modal__delete-row input {
+  width: 52px;
+  background: #1c211a;
+  border: 1px solid #46534b;
+  border-radius: 4px;
+  color: #eaeaea;
+  font-size: 11px;
+  padding: 3px 6px;
+}
+
+.gvi-leaderboard-modal__delete-btn {
+  margin-left: auto;
+  background: rgba(239, 154, 154, 0.12);
+  color: #ef9a9a;
+  border: 1px solid rgba(239, 154, 154, 0.35);
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+}
+
+.gvi-leaderboard-modal__delete-btn:hover {
+  background: rgba(239, 154, 154, 0.2);
+}
+
+.gvi-leaderboard-modal__body {
+  padding: 10px 16px 16px;
+  overflow-y: auto;
+}
+
+.gvi-leaderboard-modal__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gvi-leaderboard-modal__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #3a4048;
+  cursor: pointer;
+}
+
+.gvi-leaderboard-modal__row:hover {
+  background: rgba(102, 187, 106, 0.1);
+}
+
+.gvi-leaderboard-modal__rank {
+  flex-shrink: 0;
+  width: 30px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9aa4ad;
+}
+
+.gvi-leaderboard-modal__thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid #3a4048;
+}
+
+.gvi-leaderboard-modal__info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.gvi-leaderboard-modal__title {
+  font-size: 13px;
+  color: #cfd6dc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gvi-leaderboard-modal__score {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gvi-leaderboard-modal__score.high {
+  color: #66bb6a;
+}
+
+.gvi-leaderboard-modal__score.mid {
+  color: #ffca28;
+}
+
+.gvi-leaderboard-modal__score.low {
+  color: #ef9a9a;
+}

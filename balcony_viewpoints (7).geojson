@@ -1,0 +1,1805 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-E-01",
+        "floor": 1,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99298598154977,
+          40.763773075867924,
+          -7.596077810066298
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-E-02",
+        "floor": 1,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304813613611,
+          40.76377985975819,
+          -7.538783597617717
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-E-03",
+        "floor": 1,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308258785278,
+          40.763803056148426,
+          -7.93290956439447
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-N-01",
+        "floor": 1,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275266776927,
+          40.76402906330837,
+          -7.394269822475759
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-N-02",
+        "floor": 1,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277540451043,
+          40.76386328001812,
+          -7.115209453105436
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-N-03",
+        "floor": 1,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308904296177,
+          40.763821352221676,
+          -6.934337485513354
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-S-01",
+        "floor": 1,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304960780967,
+          40.76391248197272,
+          -7.52017918650475
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-S-02",
+        "floor": 1,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278684865307,
+          40.76406009464193,
+          -8.099952105690882
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-W-01",
+        "floor": 1,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267426990312,
+          40.76397851480733,
+          -7.859273715419158
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F01-W-02",
+        "floor": 1,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278449426966,
+          40.76402692492518,
+          -7.743037879952389
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-E-01",
+        "floor": 2,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99298331677221,
+          40.7637765852235,
+          -0.4660829446617888
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-E-02",
+        "floor": 2,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304521331194,
+          40.76378370896316,
+          -0.9068831947790522
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-E-03",
+        "floor": 2,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308774298522,
+          40.76380527215306,
+          -1.344584775634183
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-N-01",
+        "floor": 2,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275432243432,
+          40.76403498873079,
+          -0.26427282762790966
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-N-02",
+        "floor": 2,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927758051234,
+          40.76386345587901,
+          -1.024981924486656
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-N-03",
+        "floor": 2,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99306571136589,
+          40.76380591114902,
+          5.954938123723375
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-S-01",
+        "floor": 2,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9930496541644,
+          40.763912502321304,
+          -0.9318537967889892
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-S-02",
+        "floor": 2,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278644806546,
+          40.76405991876301,
+          -2.0097247240576643
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-W-01",
+        "floor": 2,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267398508117,
+          40.76397888990002,
+          -0.7728515979324724
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F02-W-02",
+        "floor": 2,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278715905724,
+          40.76402341556994,
+          -0.6130378813316365
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-E-01",
+        "floor": 3,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99298280066222,
+          40.76377726490955,
+          5.667727494928663
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-E-02",
+        "floor": 3,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305521199007,
+          40.76378855130848,
+          5.725021632769413
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-E-03",
+        "floor": 3,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308235656284,
+          40.76380336074354,
+          5.287317855769961
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-N-01",
+        "floor": 3,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275476939249,
+          40.76403518494648,
+          6.36763274531901
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-N-02",
+        "floor": 3,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927758051247,
+          40.763863455879545,
+          6.105017997476401
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-N-03",
+        "floor": 3,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99307707773896,
+          40.76381090075573,
+          6.155155201377653
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-S-01",
+        "floor": 3,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304920719646,
+          40.76391230611158,
+          5.700048257412307
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-S-02",
+        "floor": 3,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278689506409,
+          40.76406011494856,
+          5.618372616313794
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-W-01",
+        "floor": 3,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267424313618,
+          40.7639785500578,
+          5.859051053219723
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F03-W-02",
+        "floor": 3,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278715905525,
+          40.76402341557257,
+          6.5169621228145385
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-E-01",
+        "floor": 4,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9929825426091,
+          40.76377760475033,
+          12.299630148532625
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-E-02",
+        "floor": 4,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305200434603,
+          40.76379277558558,
+          12.400502182443216
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-E-03",
+        "floor": 4,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308235656483,
+          40.7638033607409,
+          12.41731785699536
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-N-01",
+        "floor": 4,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275773024938,
+          40.76403128567982,
+          13.49763285029967
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-N-02",
+        "floor": 4,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277625209177,
+          40.76386365208903,
+          12.736920644921863
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-N-03",
+        "floor": 4,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99303324608141,
+          40.76379685860666,
+          12.936531051161133
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-S-01",
+        "floor": 4,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304876022951,
+          40.7639121099022,
+          12.33195090774264
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-S-02",
+        "floor": 4,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99289373428857,
+          40.764107014986905,
+          11.335147686914112
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-W-01",
+        "floor": 4,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267450119066,
+          40.763978210216266,
+          12.490953707001575
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F04-W-02",
+        "floor": 4,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278446750914,
+          40.764026960166824,
+          13.105286916040459
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-E-01",
+        "floor": 5,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99298228455643,
+          40.763777944590345,
+          18.931532800348684
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-E-02",
+        "floor": 5,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304148959605,
+          40.76378861293126,
+          19.0324049207569
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-E-03",
+        "floor": 5,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9930820985113,
+          40.76380370058207,
+          19.04922050964864
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-N-01",
+        "floor": 5,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275817720299,
+          40.76403148189906,
+          20.12953550493088
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-N-02",
+        "floor": 5,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277669905787,
+          40.76386384829803,
+          19.36882329533237
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-N-03",
+        "floor": 5,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99307878441566,
+          40.76380125196673,
+          19.375382986453513
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-S-01",
+        "floor": 5,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9930487602293,
+          40.763912109901995,
+          19.461950908926113
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-S-02",
+        "floor": 5,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99289669506153,
+          40.76410311563932,
+          18.465147458268426
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-W-01",
+        "floor": 5,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267475924461,
+          40.763977870375406,
+          19.122856363580276
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F05-W-02",
+        "floor": 5,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278498362257,
+          40.76402628047839,
+          19.23909221532001
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-E-01",
+        "floor": 6,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9929825426148,
+          40.763777604742685,
+          26.559630151373316
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-E-02",
+        "floor": 6,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305443783196,
+          40.76378957082855,
+          25.6207295876863
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-E-03",
+        "floor": 6,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308158240295,
+          40.763804380265896,
+          25.18302581622776
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-N-01",
+        "floor": 6,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275611026138,
+          40.764035773591424,
+          26.263340709270906
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-N-02",
+        "floor": 6,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927771460231,
+          40.76386404450662,
+          26.000725947400472
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-N-03",
+        "floor": 6,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308011946884,
+          40.763817435131365,
+          26.59253851810048
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-S-01",
+        "floor": 6,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305342210323,
+          40.76391415636851,
+          26.05027572440284
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-S-02",
+        "floor": 6,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278600121313,
+          40.76405972246707,
+          26.012177903692386
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-W-01",
+        "floor": 6,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267501729801,
+          40.7639775305352,
+          25.754759017194136
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F06-W-02",
+        "floor": 6,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278498362301,
+          40.764026280477744,
+          26.369092214154538
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-E-01",
+        "floor": 7,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9929849760884,
+          40.76377440000093,
+          32.64985759590727
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-E-02",
+        "floor": 7,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305443783543,
+          40.76378957082392,
+          32.75072959082212
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-E-03",
+        "floor": 7,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308184046083,
+          40.763804040419004,
+          32.811123166314985
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-N-01",
+        "floor": 7,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99276417995044,
+          40.76403411700855,
+          33.436918723680265
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-N-02",
+        "floor": 7,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277644431534,
+          40.763863736472054,
+          39.64956936645855
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-N-03",
+        "floor": 7,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308327241239,
+          40.76381362025257,
+          39.24518746600944
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-S-01",
+        "floor": 7,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304856800767,
+          40.76391202552144,
+          39.24459962322162
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-S-02",
+        "floor": 7,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99276045702811,
+          40.764048509071905,
+          33.36006797159511
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-W-01",
+        "floor": 7,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267501729521,
+          40.76397753053891,
+          32.88475902058001
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F07-W-02",
+        "floor": 7,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99278483654732,
+          40.76402647416797,
+          39.519838276432054
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-E-01",
+        "floor": 8,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9929853812186,
+          40.76377386646952,
+          46.298701009871465
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-E-02",
+        "floor": 8,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305240616417,
+          40.76378324147528,
+          45.85789782017816
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-E-03",
+        "floor": 8,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308519517125,
+          40.763799622465804,
+          46.41638873202386
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-N-01",
+        "floor": 8,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927566683552,
+          40.764025620608585,
+          46.50050918066128
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-N-02",
+        "floor": 8,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277689127938,
+          40.7638639326803,
+          46.281472013928614
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-N-03",
+        "floor": 8,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305304317926,
+          40.76380585335459,
+          47.15346917673631
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-S-01",
+        "floor": 8,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99304856800765,
+          40.76391202552156,
+          46.37459962221436
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-S-02",
+        "floor": 8,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927864482393,
+          40.76405991862987,
+          40.7702752357834
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-W-01",
+        "floor": 8,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267527534774,
+          40.76397719069976,
+          39.516661673973
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F08-W-02",
+        "floor": 8,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927848365479,
+          40.764026474167274,
+          46.64983827850387
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-E-01",
+        "floor": 9,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99298512316439,
+          40.763774206311794,
+          52.93060365990282
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-E-02",
+        "floor": 9,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305214811555,
+          40.76378358131955,
+          52.489800468521025
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-E-03",
+        "floor": 9,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99317389239664,
+          40.76384490244786,
+          46.57303201418239
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-N-01",
+        "floor": 9,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99275415445881,
+          40.76402971608235,
+          53.1324116696766
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-N-02",
+        "floor": 9,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277689127942,
+          40.76386393268056,
+          53.41147199735436
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-N-03",
+        "floor": 9,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9930675799411,
+          40.763817129641446,
+          52.91993339992748
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-S-01",
+        "floor": 9,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99305322986223,
+          40.76391407197968,
+          52.96292442810458
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-S-02",
+        "floor": 9,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277785055753,
+          40.764050945396136,
+          46.49313890591454
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-W-01",
+        "floor": 9,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267512826596,
+          40.76397738439885,
+          52.66740770656534
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F09-W-02",
+        "floor": 9,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267765756551,
+          40.763978518544604,
+          52.783652308457405
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-E-01",
+        "floor": 10,
+        "side": "East",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99298445998106,
+          40.76377507968366,
+          53.04366288197997
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-E-02",
+        "floor": 10,
+        "side": "East",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308251292759,
+          40.76379762224297,
+          53.1009574527629
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-E-03",
+        "floor": 10,
+        "side": "East",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99316824787252,
+          40.763843330860304,
+          52.706836644391906
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-N-01",
+        "floor": 10,
+        "side": "North",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99274893446754,
+          40.764037822614355,
+          53.74356806442767
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-N-02",
+        "floor": 10,
+        "side": "North",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9927784869116,
+          40.76386463312946,
+          53.02643377620334
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-N-03",
+        "floor": 10,
+        "side": "North",
+        "balcony": 3,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99308656891318,
+          40.76382026641423,
+          53.66182473224314
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-S-01",
+        "floor": 10,
+        "side": "South",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.9930520811923,
+          40.76391356773565,
+          53.07598364213532
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-S-02",
+        "floor": 10,
+        "side": "South",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99277740362922,
+          40.76405074917688,
+          53.12504155666578
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-W-01",
+        "floor": 10,
+        "side": "West",
+        "balcony": 1,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99267579145133,
+          40.76397651102349,
+          52.78046698324797
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "F10-W-02",
+        "floor": 10,
+        "side": "West",
+        "balcony": 2,
+        "type": "balcony_viewpoint"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -73.99268857742295,
+          40.76398214764538,
+          52.89670996973515
+        ]
+      }
+    }
+  ]
+}

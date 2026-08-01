@@ -16,7 +16,7 @@ import { resolveBalconyFeature } from "./BalconyFloorGenerator";
 import { flyToBalcony } from "./BalconyFlyTo";
 import { useCapturedView } from "./useCapturedView";
 import { computeGVIFromDataUrl, GVIResult } from "../../services/gvi";
-import { fetchViewpoints, manualCapture, resetSlots, RemoteViewpoint } from "./balconyGenerationApi";
+import { fetchViewpoints, manualCapture, RemoteViewpoint } from "./balconyGenerationApi";
 import { ManualVegetationCollection } from "../manual-vegetation/types/ManualVegetationTypes";
 import { listManualVegetationPolygons } from "../manual-vegetation/storage/VegetationStorage";
 import "./BalconyViewpointNavigator.css";
@@ -136,7 +136,6 @@ export function BalconyViewpointNavigator({
   // window at once (not just the small in-panel preview list), for a client
   // presentation moment rather than day-to-day navigation.
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
-  const [deleteTopCount, setDeleteTopCount] = useState(18);
   const gviScanCancelledRef = useRef(false);
 
   // Persists the ranking so re-opening it (or reloading the page) doesn't
@@ -712,47 +711,6 @@ export function BalconyViewpointNavigator({
     gviScanCancelledRef.current = true;
   }
 
-  /**
-   * Permanently removes the top N ranked results (as currently sorted/shown)
-   * from everywhere they live: the on-screen ranking list/leaderboard, the
-   * localStorage fallback cache, the local gallery's own preview/GVI fields
-   * for any that are saved (Floor 1) entries, and the backend database
-   * (reset back to never-captured for that floor/side/window slot).
-   */
-  async function handleDeleteTopResults(count: number) {
-    if (count <= 0 || gviScanResults.length === 0) return;
-    const toDelete = gviScanResults.slice(0, count);
-    const remaining = gviScanResults.slice(count);
-
-    setGviScanResults(remaining);
-    saveGviScanResults(remaining);
-
-    // Only clears the preview/GVI fields — never removes the saved
-    // position itself, since that's still the source of truth the camera
-    // navigates to for that floor/side/window.
-    const deletedIds = new Set(toDelete.map((r) => r.feature.properties.id));
-    const hasMatchingSavedEntry = collection.features.some((f) => deletedIds.has(f.properties.id));
-    if (hasMatchingSavedEntry) {
-      const clearedFeatures = collection.features.map((f) =>
-        deletedIds.has(f.properties.id)
-          ? { ...f, properties: { ...f.properties, previewImage: undefined, gviScore: undefined } }
-          : f
-      );
-      onPersistCollection({ ...collection, features: clearedFeatures });
-    }
-
-    try {
-      const result = await resetSlots(
-        toDelete.map((r) => ({ floorNumber: r.floor, direction: r.side, flatNumber: r.balcony }))
-      );
-      if (result.notFound > 0) {
-        console.warn(`GVI leaderboard delete: ${result.notFound} of ${toDelete.length} slots had no backend record.`);
-      }
-    } catch (err) {
-      console.warn("Failed to delete GVI results from the backend:", err);
-    }
-  }
-
   function handleGoToResult(result: GviScanResult) {
     if (!viewer) return;
     tourCancelledRef.current = true;
@@ -1216,27 +1174,6 @@ export function BalconyViewpointNavigator({
           {gviScanSavedAt && (
             <div className="gvi-leaderboard-modal__saved-at">
               Saved {new Date(gviScanSavedAt).toLocaleString()}
-            </div>
-          )}
-          {gviScanResults.length > 0 && (
-            <div className="gvi-leaderboard-modal__delete-row">
-              <span>Delete top</span>
-              <input
-                type="number"
-                min={1}
-                max={gviScanResults.length}
-                value={deleteTopCount}
-                onChange={(event) => setDeleteTopCount(Number(event.target.value))}
-              />
-              <span>ranked entries</span>
-              <button
-                type="button"
-                className="gvi-leaderboard-modal__delete-btn"
-                onClick={() => void handleDeleteTopResults(deleteTopCount)}
-                title="Delete these ranked results"
-              >
-                🗑 Delete
-              </button>
             </div>
           )}
           <div className="gvi-leaderboard-modal__body">

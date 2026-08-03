@@ -39,6 +39,14 @@ export function useCapturedView() {
       setCaptureError(null);
 
       try {
+        // Forces an immediate, synchronous render right before reading the
+        // canvas. Needed because Cesium's requestRenderMode defers its next
+        // render to the browser's own next frame — without this, a capture
+        // taken in the same tick as a camera move (or any other change that
+        // hasn't been drawn yet) could read a stale frame instead of what's
+        // actually being requested. viewer.scene.render() (not
+        // requestRender()) is what makes this synchronous.
+        viewer.scene.render();
         const canvas = viewer.scene.canvas as HTMLCanvasElement;
         const image = canvas.toDataURL("image/png");
         const camera = viewer.camera;

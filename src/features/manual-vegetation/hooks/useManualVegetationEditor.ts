@@ -7,9 +7,7 @@ import {
 } from "../types/ManualVegetationTypes";
 import {
   listManualVegetationPolygons,
-  loadManualVegetationCollection,
   makePolygonFromPositions,
-  polygonToFeature,
   removeManualVegetationPolygon,
   saveManualVegetationCollection,
   upsertManualVegetationPolygon,
@@ -45,6 +43,7 @@ export function useManualVegetationEditor(
   const [isDraftFinished, setIsDraftFinished] = useState(false);
   const [selectedPolygonId, setSelectedPolygonId] = useState<string | null>(null);
   const draggingVertexRef = useRef<{ polygonId: string; vertexIndex: number } | null>(null);
+  const pendingDragPointRef = useRef<LonLat | null>(null);
 
   const overlayRef = useRef<ManualVegetationOverlay | null>(null);
   const polygons = useMemo(() => listManualVegetationPolygons(collection), [collection]);
@@ -65,13 +64,6 @@ export function useManualVegetationEditor(
   // effect would only ever re-run when polygons/selection change — missing
   // the very first render entirely if the overlay wasn't ready yet.
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log("[ManualVegetation][editor effect] polygons/selection/viewer/showSaved changed — calling renderSaved", {
-      polygonCount: polygons.length,
-      selectedPolygonId,
-      hasOverlay: !!overlayRef.current,
-      showSaved,
-    });
     overlayRef.current?.renderSaved(showSaved ? polygons : [], selectedPolygonId);
   }, [polygons, selectedPolygonId, viewer, showSaved]);
 
@@ -137,20 +129,34 @@ export function useManualVegetationEditor(
       const point = pickGroundPosition(viewer, event.endPosition);
       if (!point) return;
 
-      const polygon = polygons.find((p) => p.id === dragging.polygonId);
-      if (!polygon) return;
-      const nextPositions = polygon.positions.map((p, i) => (i === dragging.vertexIndex ? point : p));
-      const updated: ManualVegetationPolygon = {
-        ...polygon,
-        positions: nextPositions,
-        areaM2: computePolygonAreaM2(nextPositions),
-        centroid: computePolygonCentroid(nextPositions),
-        updatedAt: Date.now(),
-      };
-      onPersist(upsertManualVegetationPolygon(collection, updated));
+      // Only move the one handle entity for live visual feedback here —
+      // NOT onPersist. Persisting on every mouse-move (60+/sec) used to
+      // trigger a full re-render of every saved polygon's fill/outline
+      // (plus a terrain re-sample) on each pixel of drag, which is what
+      // made dragging feel slow. The real commit — the one full rebuild —
+      // happens once, on LEFT_UP below.
+      pendingDragPointRef.current = point;
+      overlayRef.current?.moveHandle(dragging.polygonId, dragging.vertexIndex, point);
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
     handler.setInputAction(() => {
+      const dragging = draggingVertexRef.current;
+      const point = pendingDragPointRef.current;
+      if (dragging && point) {
+        const polygon = polygons.find((p) => p.id === dragging.polygonId);
+        if (polygon) {
+          const nextPositions = polygon.positions.map((p, i) => (i === dragging.vertexIndex ? point : p));
+          const updated: ManualVegetationPolygon = {
+            ...polygon,
+            positions: nextPositions,
+            areaM2: computePolygonAreaM2(nextPositions),
+            centroid: computePolygonCentroid(nextPositions),
+            updatedAt: Date.now(),
+          };
+          onPersist(upsertManualVegetationPolygon(collection, updated));
+        }
+      }
+      pendingDragPointRef.current = null;
       draggingVertexRef.current = null;
       viewer.scene.screenSpaceCameraController.enableInputs = true;
     }, Cesium.ScreenSpaceEventType.LEFT_UP);
@@ -205,22 +211,7 @@ export function useManualVegetationEditor(
     const polygon = makePolygonFromPositions(draftPoints, name || `Vegetation ${polygons.length + 1}`);
     const next = upsertManualVegetationPolygon(collection, polygon);
     onPersist(next);
-
-    // STEP 2 — verify storage: does what we just wrote match what a fresh
-    // load actually reads back (localStorage round-trip, not just memory)?
     saveManualVegetationCollection(next);
-    const reloaded = loadManualVegetationCollection();
-    const reloadedPolygon = reloaded.features.find((f) => f.id === polygon.id);
-    // eslint-disable-next-line no-console
-    console.log("[ManualVegetation] STEP 2 — Storage verification", {
-      savedPolygonsCount: next.features.length,
-      reloadedPolygonsCount: reloaded.features.length,
-      newPolygonFoundAfterReload: !!reloadedPolygon,
-      coordinatesMatch: reloadedPolygon
-        ? JSON.stringify(reloadedPolygon.geometry.coordinates) ===
-          JSON.stringify(polygonToFeature(polygon).geometry.coordinates)
-        : false,
-    });
 
     setDraftPoints([]);
     setIsDraftFinished(false);

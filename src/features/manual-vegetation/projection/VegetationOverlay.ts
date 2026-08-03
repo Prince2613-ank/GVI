@@ -34,36 +34,115 @@ function toCartesianArray(positions: LonLat[], heightM: number): Cesium.Cartesia
   return positions.map((p) => Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, heightM));
 }
 
-/** Same terrain-height resolution TreeRenderer.ts uses for trees — real absolute elevation, not ground-clamping. */
-async function resolveGroundHeightsM(
-  viewer: Cesium.Viewer,
-  polygons: ManualVegetationPolygon[]
-): Promise<Map<string, number>> {
-  const cartographics = polygons.map((polygon) => {
-    const centroid = computePolygonCentroid(polygon.positions);
-    return Cesium.Cartographic.fromDegrees(centroid.longitude, centroid.latitude);
-  });
+/** Safety cap so awaiting tessellation readiness can never hang forever if a primitive's worker-side build stalls. */
+const PRIMITIVE_READY_TIMEOUT_MS = 8000;
+/** Polygons per chunk for the far-to-near progressive reveal — small enough that the first (farthest) chunk tessellates and appears quickly instead of waiting on the whole set at once. */
+const CHUNK_SIZE = 6;
 
-  let sampled: Cesium.Cartographic[] = [];
-  try {
-    sampled = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, cartographics.slice());
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[ManualVegetation] Most-detailed terrain sampling failed; using loaded globe elevation",
-      error
-    );
+/**
+ * `asynchronous: true` Primitives tessellate on a web worker — the
+ * constructor returns immediately, but `.ready` only flips true once that
+ * work actually lands, one or more frames later. Without awaiting this,
+ * callers (renderSaved) resolved — and any "still loading" UI tied to that
+ * promise closed — before the polygon was actually visible.
+ */
+function waitUntilPrimitiveReady(
+  primitive: { ready: boolean },
+  timeoutMs = PRIMITIVE_READY_TIMEOUT_MS
+): Promise<void> {
+  return new Promise((resolve) => {
+    const start = performance.now();
+    function check() {
+      if (primitive.ready || performance.now() - start > timeoutMs) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(check);
+    }
+    check();
+  });
+}
+
+function cacheKey(p: ManualVegetationPolygon): string {
+  return `${p.id}:${p.updatedAt}`;
+}
+
+/**
+ * Synchronous, no network wait — whatever terrain detail is already loaded
+ * for the current view. Used to get polygons drawn immediately; may be a
+ * coarser LOD than sampleGroundHeightsPrecise below, especially right after
+ * a camera move/rotation ends, when the most-detailed tiles for the new
+ * view haven't streamed in yet.
+ */
+function fastGroundHeightsM(
+  viewer: Cesium.Viewer,
+  polygons: ManualVegetationPolygon[],
+  cache: Map<string, number>
+): Map<string, number> {
+  const heights = new Map<string, number>();
+  for (const polygon of polygons) {
+    const cached = cache.get(cacheKey(polygon));
+    if (cached !== undefined) {
+      heights.set(polygon.id, cached);
+      continue;
+    }
+    const centroid = computePolygonCentroid(polygon.positions);
+    const cartographic = Cesium.Cartographic.fromDegrees(centroid.longitude, centroid.latitude);
+    const loadedHeight = viewer.scene.globe.getHeight(cartographic);
+    const height = (Number.isFinite(loadedHeight) ? loadedHeight : undefined) ?? 0;
+    heights.set(polygon.id, height + HEIGHT_OFFSET_M);
+    // Deliberately NOT cached here — this is a fast-but-possibly-coarse
+    // reading; only the precise sampled value below gets cached, so a
+    // later call still upgrades it instead of treating this as final.
+  }
+  return heights;
+}
+
+/**
+ * Same terrain-height resolution TreeRenderer.ts uses for trees — real,
+ * most-detailed absolute elevation, not ground-clamping. This is the slow
+ * path (network/tile-dependent, can take a while right after a camera
+ * move) — callers should show fastGroundHeightsM's result first and treat
+ * this as a background upgrade, not something to block the first paint on.
+ */
+async function sampleGroundHeightsPrecise(
+  viewer: Cesium.Viewer,
+  polygons: ManualVegetationPolygon[],
+  cache: Map<string, number>
+): Promise<Map<string, number>> {
+  const uncached = polygons.filter((p) => !cache.has(cacheKey(p)));
+
+  if (uncached.length > 0) {
+    const cartographics = uncached.map((polygon) => {
+      const centroid = computePolygonCentroid(polygon.positions);
+      return Cesium.Cartographic.fromDegrees(centroid.longitude, centroid.latitude);
+    });
+
+    let sampled: Cesium.Cartographic[] = [];
+    try {
+      sampled = await Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, cartographics.slice());
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[ManualVegetation] Most-detailed terrain sampling failed; using loaded globe elevation",
+        error
+      );
+    }
+
+    uncached.forEach((polygon, index) => {
+      const sampledHeight = sampled[index]?.height;
+      const loadedHeight = viewer.scene.globe.getHeight(cartographics[index]);
+      const height =
+        (Number.isFinite(sampledHeight) ? sampledHeight : undefined) ??
+        (Number.isFinite(loadedHeight) ? loadedHeight : undefined) ??
+        0;
+      cache.set(cacheKey(polygon), height + HEIGHT_OFFSET_M);
+    });
   }
 
   const heights = new Map<string, number>();
-  polygons.forEach((polygon, index) => {
-    const sampledHeight = sampled[index]?.height;
-    const loadedHeight = viewer.scene.globe.getHeight(cartographics[index]);
-    const height =
-      (Number.isFinite(sampledHeight) ? sampledHeight : undefined) ??
-      (Number.isFinite(loadedHeight) ? loadedHeight : undefined) ??
-      0;
-    heights.set(polygon.id, height + HEIGHT_OFFSET_M);
+  polygons.forEach((polygon) => {
+    heights.set(polygon.id, cache.get(cacheKey(polygon)) ?? HEIGHT_OFFSET_M);
   });
   return heights;
 }
@@ -84,117 +163,157 @@ async function resolveGroundHeightsM(
  */
 export class ManualVegetationOverlay {
   private readonly primitives = new Cesium.PrimitiveCollection();
-  private savedPrimitive: Cesium.Primitive | null = null;
+  // One fill Primitive per chunk (see drawSavedChunked) instead of a single
+  // Primitive for every saved polygon — splitting it up is what lets the
+  // farthest chunk finish tessellating and appear on screen while nearer
+  // chunks are still building, instead of nothing appearing until the
+  // entire set finishes at once.
+  private savedPrimitives: Cesium.Primitive[] = [];
   private draftPrimitive: Cesium.Primitive | null = null;
   private handleIds: string[] = [];
   private outlineIds: string[] = [];
   private renderGeneration = 0;
+  // Resolved heights rarely change (terrain doesn't move) — keyed by
+  // `id:updatedAt` so a polygon only re-samples terrain when its own
+  // position actually changes, instead of every polygon re-sampling on
+  // every renderSaved call (e.g. dragging one vertex was re-sampling
+  // terrain for ALL saved polygons on every mouse-move).
+  private readonly heightCache = new Map<string, number>();
 
   constructor(private readonly viewer: Cesium.Viewer) {
     viewer.scene.primitives.add(this.primitives);
   }
 
-  async renderSaved(polygons: ManualVegetationPolygon[], selectedId: string | null): Promise<void> {
-    const generation = ++this.renderGeneration;
-    // eslint-disable-next-line no-console
-    console.log("[ManualVegetation][renderSaved] called", {
-      generation,
-      polygonCount: polygons.length,
-      overlayPrimitivesInScene: this.viewer.scene.primitives.contains(this.primitives),
-      overlayPrimitivesShow: this.primitives.show,
-      sceneTopLevelPrimitiveCount: this.viewer.scene.primitives.length,
+  private buildOutline(polygon: ManualVegetationPolygon, selectedId: string | null, heightM: number): void {
+    const closedLoop = [...toCartesianArray(polygon.positions, heightM), toCartesianArray([polygon.positions[0]], heightM)[0]];
+    const id = `${OUTLINE_PREFIX}${polygon.id}`;
+    this.viewer.entities.add({
+      id,
+      polyline: {
+        positions: closedLoop,
+        width: polygon.id === selectedId ? 4 : 2.5,
+        material: polygon.id === selectedId ? SELECTED_COLOR.withAlpha(1) : OUTLINE_COLOR,
+      },
     });
+    this.outlineIds.push(id);
+  }
 
-    if (this.savedPrimitive) {
-      this.primitives.remove(this.savedPrimitive);
-      this.savedPrimitive = null;
-    }
-    if (polygons.length === 0) {
-      this.outlineIds.forEach((id) => this.viewer.entities.removeById(id));
-      this.outlineIds = [];
-      // eslint-disable-next-line no-console
-      console.log("[ManualVegetation][renderSaved] polygons.length === 0 — clearing fill, generation", generation);
-      return;
-    }
-
-    const heights = await resolveGroundHeightsM(this.viewer, polygons);
-    // A newer call landed while this terrain sampling was in flight — drop this one.
-    if (generation !== this.renderGeneration) {
-      // eslint-disable-next-line no-console
-      console.log(
-        "[ManualVegetation][renderSaved] STALE — a newer renderSaved call superseded this one",
-        { thisGeneration: generation, currentGeneration: this.renderGeneration }
-      );
-      return;
-    }
-
-    // Bright, always-on outline for EVERY saved polygon (not just the
-    // selected one) — the translucent fill alone blends into olive-green
-    // rooftop imagery and is easy to miss on a single Analyze click.
+  /**
+   * Clears everything, then rebuilds in chunks ordered farthest-from-camera
+   * first. Each chunk's outlines are added immediately (cheap Entity
+   * polylines, no tessellation wait) and its fill Primitive is built and
+   * awaited before starting the next chunk — so the farthest polygons
+   * visibly appear first while nearer ones are still tessellating, instead
+   * of the whole set staying invisible until one giant Primitive finishes.
+   * Aborts between chunks if `generation` has been superseded by a newer
+   * renderSaved call.
+   */
+  private async drawSavedChunked(
+    polygons: ManualVegetationPolygon[],
+    selectedId: string | null,
+    heights: Map<string, number>,
+    generation: number
+  ): Promise<void> {
+    this.savedPrimitives.forEach((p) => this.primitives.remove(p));
+    this.savedPrimitives = [];
     this.outlineIds.forEach((id) => this.viewer.entities.removeById(id));
     this.outlineIds = [];
-    for (const polygon of polygons) {
-      if (polygon.positions.length < 3) continue;
-      const heightM = heights.get(polygon.id) ?? HEIGHT_OFFSET_M;
-      const closedLoop = [...toCartesianArray(polygon.positions, heightM), toCartesianArray([polygon.positions[0]], heightM)[0]];
-      const id = `${OUTLINE_PREFIX}${polygon.id}`;
-      this.viewer.entities.add({
-        id,
-        polyline: {
-          positions: closedLoop,
-          width: polygon.id === selectedId ? 4 : 2.5,
-          material: polygon.id === selectedId ? SELECTED_COLOR.withAlpha(1) : OUTLINE_COLOR,
-        },
-      });
-      this.outlineIds.push(id);
-    }
 
-    const instances: Cesium.GeometryInstance[] = [];
-    for (const polygon of polygons) {
-      if (polygon.positions.length < 3) continue;
-      try {
+    const cameraPosition = this.viewer.camera.positionWC;
+    const ordered = polygons
+      .filter((p) => p.positions.length >= 3)
+      .map((polygon) => {
         const heightM = heights.get(polygon.id) ?? HEIGHT_OFFSET_M;
-        instances.push(
-          new Cesium.GeometryInstance({
-            id: `${SAVED_PREFIX}${polygon.id}`,
-            geometry: new Cesium.PolygonGeometry({
-              polygonHierarchy: new Cesium.PolygonHierarchy(
-                toCartesianArray(polygon.positions, heightM)
-              ),
-              height: heightM,
-              extrudedHeight: heightM + POLYGON_HEIGHT_M,
-              vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
-            }),
-            attributes: {
-              color: Cesium.ColorGeometryInstanceAttribute.fromColor(
-                polygon.id === selectedId ? SELECTED_COLOR : FILL_COLOR
-              ),
-            },
-          })
-        );
-      } catch (error) {
-        // One malformed (e.g. self-intersecting) hand-drawn polygon must
-        // never stop every OTHER saved polygon from rendering.
-        // eslint-disable-next-line no-console
-        console.warn(`Failed to build geometry for manual vegetation polygon "${polygon.name}":`, error);
-      }
-    }
-    if (instances.length === 0) return;
+        const centroid = computePolygonCentroid(polygon.positions);
+        const world = Cesium.Cartesian3.fromDegrees(centroid.longitude, centroid.latitude, heightM);
+        return { polygon, heightM, distance: Cesium.Cartesian3.distance(cameraPosition, world) };
+      })
+      // Far-to-near: farthest polygons finish tessellating and appear
+      // first, since they're the ones most likely already fully visible/
+      // unobstructed in the current view right after a rotation.
+      .sort((a, b) => b.distance - a.distance);
 
-    this.savedPrimitive = new Cesium.Primitive({
-      geometryInstances: instances,
-      appearance: new Cesium.PerInstanceColorAppearance({ translucent: true, flat: true }),
-      asynchronous: true,
-    });
-    this.primitives.add(this.savedPrimitive);
-    // eslint-disable-next-line no-console
-    console.log("[ManualVegetation][renderSaved] fill primitive added", {
-      generation,
-      instanceCount: instances.length,
-      overlayPrimitivesInScene: this.viewer.scene.primitives.contains(this.primitives),
-      overlayPrimitivesShow: this.primitives.show,
-      overlayPrimitivesLength: this.primitives.length,
-    });
+    for (let i = 0; i < ordered.length; i += CHUNK_SIZE) {
+      if (generation !== this.renderGeneration) return;
+      const chunk = ordered.slice(i, i + CHUNK_SIZE);
+
+      const instances: Cesium.GeometryInstance[] = [];
+      for (const { polygon, heightM } of chunk) {
+        this.buildOutline(polygon, selectedId, heightM);
+        try {
+          instances.push(
+            new Cesium.GeometryInstance({
+              id: `${SAVED_PREFIX}${polygon.id}`,
+              geometry: new Cesium.PolygonGeometry({
+                polygonHierarchy: new Cesium.PolygonHierarchy(
+                  toCartesianArray(polygon.positions, heightM)
+                ),
+                height: heightM,
+                extrudedHeight: heightM + POLYGON_HEIGHT_M,
+                vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
+              }),
+              attributes: {
+                color: Cesium.ColorGeometryInstanceAttribute.fromColor(
+                  polygon.id === selectedId ? SELECTED_COLOR : FILL_COLOR
+                ),
+              },
+            })
+          );
+        } catch (error) {
+          // One malformed (e.g. self-intersecting) hand-drawn polygon must
+          // never stop every OTHER saved polygon from rendering.
+          // eslint-disable-next-line no-console
+          console.warn(`Failed to build geometry for manual vegetation polygon "${polygon.name}":`, error);
+        }
+      }
+      if (instances.length === 0) continue;
+
+      const chunkPrimitive = new Cesium.Primitive({
+        geometryInstances: instances,
+        appearance: new Cesium.PerInstanceColorAppearance({ translucent: true, flat: true }),
+        asynchronous: true,
+      });
+      this.primitives.add(chunkPrimitive);
+      this.savedPrimitives.push(chunkPrimitive);
+      await waitUntilPrimitiveReady(chunkPrimitive);
+    }
+  }
+
+  /**
+   * Two-phase render: draws immediately using whatever terrain detail is
+   * already loaded (synchronous, no network wait), then upgrades to precise
+   * sampled heights in the background. Right after a camera rotation ends,
+   * the most-detailed tiles for the new view often haven't streamed in yet
+   * — blocking the whole polygon render on that (the old behavior) is what
+   * made polygons take a while to appear right after rotating. Now they
+   * appear instantly at a "close enough" height and quietly self-correct a
+   * moment later only if the precise height actually differs. Both passes
+   * go through drawSavedChunked, so both also get the far-to-near
+   * progressive reveal instead of popping in all at once.
+   */
+  async renderSaved(polygons: ManualVegetationPolygon[], selectedId: string | null): Promise<void> {
+    const generation = ++this.renderGeneration;
+
+    if (polygons.length === 0) {
+      this.savedPrimitives.forEach((p) => this.primitives.remove(p));
+      this.savedPrimitives = [];
+      this.outlineIds.forEach((id) => this.viewer.entities.removeById(id));
+      this.outlineIds = [];
+      return;
+    }
+
+    const fastHeights = fastGroundHeightsM(this.viewer, polygons, this.heightCache);
+    await this.drawSavedChunked(polygons, selectedId, fastHeights, generation);
+    if (generation !== this.renderGeneration) return;
+
+    const preciseHeights = await sampleGroundHeightsPrecise(this.viewer, polygons, this.heightCache);
+    // A newer call landed while sampling was in flight — drop this one.
+    if (generation !== this.renderGeneration) return;
+
+    const changed = polygons.some(
+      (p) => Math.abs((preciseHeights.get(p.id) ?? 0) - (fastHeights.get(p.id) ?? 0)) > 0.05
+    );
+    if (changed) await this.drawSavedChunked(polygons, selectedId, preciseHeights, generation);
   }
 
   async renderDraft(points: LonLat[]): Promise<void> {
@@ -272,6 +391,16 @@ export class ManualVegetationOverlay {
     });
   }
 
+  /** Cheap live-feedback move of a single handle entity during a drag — no terrain sampling, no fill/outline rebuild. */
+  moveHandle(polygonId: string, vertexIndex: number, point: LonLat): void {
+    const id = `${HANDLE_PREFIX}${polygonId}-${vertexIndex}`;
+    const entity = this.viewer.entities.getById(id);
+    if (!entity) return;
+    entity.position = new Cesium.ConstantPositionProperty(
+      Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude)
+    );
+  }
+
   static idToPolygonId(entityId: string): string | null {
     if (entityId.startsWith(OUTLINE_PREFIX)) return entityId.slice(OUTLINE_PREFIX.length);
     if (!entityId.startsWith(SAVED_PREFIX)) return null;
@@ -290,7 +419,8 @@ export class ManualVegetationOverlay {
   }
 
   destroy(): void {
-    if (this.savedPrimitive) this.primitives.remove(this.savedPrimitive);
+    this.savedPrimitives.forEach((p) => this.primitives.remove(p));
+    this.savedPrimitives = [];
     if (this.draftPrimitive) this.primitives.remove(this.draftPrimitive);
     this.handleIds.forEach((id) => this.viewer.entities.removeById(id));
     this.outlineIds.forEach((id) => this.viewer.entities.removeById(id));

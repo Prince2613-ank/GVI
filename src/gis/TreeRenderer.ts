@@ -97,22 +97,58 @@ export class TreeRenderer {
   private readonly placedTreesById = new Map<string, PlacedTree>();
   private readonly instancesByTreeId = new Map<string, TreeInstanceRef[]>();
   private hoveredTreeId: string | null = null;
+  // Resolved ground elevations persist across render() calls, keyed by
+  // tree id — terrain doesn't move, so a tree whose height was already
+  // sampled once (this session) never needs to re-sample it. Without this,
+  // every render() (e.g. re-opening a preview, first "Analyze Nearby
+  // Vegetation") redid a full sampleTerrainMostDetailed pass for every
+  // tree even when nothing had changed, which is what made trees visibly
+  // clear and rebuild ("reload") each time.
+  private readonly groundHeightCache = new Map<string, number>();
 
   constructor(private readonly viewer: Cesium.Viewer) {
     viewer.scene.primitives.add(this.primitives);
   }
 
+  /**
+   * Two-phase: builds and shows trees immediately using whatever terrain
+   * detail is already loaded/cached (no network wait), then re-samples
+   * precise heights for any tree not already in groundHeightCache in the
+   * background and only rebuilds if a height actually changed enough to
+   * matter. This is what makes a re-render (re-opening a preview, first
+   * "Analyze Nearby Vegetation" after a rotation) show trees instantly
+   * instead of clearing the scene and waiting on terrain sampling for
+   * every tree before anything reappears.
+   */
   async render(trees: VegetationPoint[]): Promise<void> {
     const generation = ++this.renderGeneration;
+    if (trees.length === 0) {
+      this.primitives.removeAll();
+      this.placedTreesById.clear();
+      this.instancesByTreeId.clear();
+      this.hoveredTreeId = null;
+      return;
+    }
+
+    const fastPlaced = this.fastPlacement(trees);
+    this.buildAllTiers(fastPlaced);
+
+    const precisePlaced = await this.resolveTerrainPlacementPrecise(trees);
+    if (generation !== this.renderGeneration) return;
+
+    const changed = precisePlaced.some((p, i) => Math.abs(p.groundHeight - fastPlaced[i].groundHeight) > 0.3);
+    if (changed) {
+      this.logDiagnostics(precisePlaced);
+      await this.buildAllTiers(precisePlaced, generation);
+    }
+  }
+
+  /** Clears and rebuilds every LOD tier's primitives for the given placements; awaits tessellation readiness. */
+  private async buildAllTiers(placedTrees: PlacedTree[], generation?: number): Promise<void> {
     this.primitives.removeAll();
     this.placedTreesById.clear();
     this.instancesByTreeId.clear();
     this.hoveredTreeId = null;
-    if (trees.length === 0) return;
-
-    const placedTrees = await this.resolveTerrainPlacement(trees);
-    if (generation !== this.renderGeneration) return;
-    this.logDiagnostics(placedTrees);
     for (const placed of placedTrees) {
       this.placedTreesById.set(placed.tree.id, placed);
     }
@@ -155,7 +191,7 @@ export class TreeRenderer {
 
     if (addedPrimitives.length) {
       await Promise.all(addedPrimitives.map((primitive) => waitUntilPrimitiveReady(primitive)));
-      if (generation !== this.renderGeneration) return;
+      if (generation !== undefined && generation !== this.renderGeneration) return;
     }
   }
 
@@ -316,6 +352,13 @@ export class TreeRenderer {
     if (this.hoveredTreeId) this.applyHighlight(this.hoveredTreeId, false);
     this.hoveredTreeId = treeId;
     if (treeId) this.applyHighlight(treeId, true);
+    // Raw per-instance geometry attribute writes (applyHighlight below)
+    // aren't tracked by Cesium's own requestRenderMode change-detection —
+    // unlike adding/removing/showing primitives, mutating an existing
+    // instance's color attribute in place is invisible to it. Without this,
+    // hovering a tree wouldn't visibly highlight until something unrelated
+    // happened to trigger a render.
+    this.viewer.scene.requestRender();
   }
 
   private applyHighlight(treeId: string, highlighted: boolean): void {
@@ -375,66 +418,96 @@ export class TreeRenderer {
     };
   }
 
-  private async resolveTerrainPlacement(
-    trees: VegetationPoint[]
-  ): Promise<PlacedTree[]> {
-    const cartographics = trees.map((tree) =>
-      Cesium.Cartographic.fromDegrees(tree.longitude, tree.latitude)
-    );
-    let sampled: Cesium.Cartographic[] = [];
-    try {
-      sampled = await Cesium.sampleTerrainMostDetailed(
-        this.viewer.terrainProvider,
-        cartographics
-      );
-    } catch (error) {
-      console.warn(
-        "[Tree placement] Most-detailed terrain sampling failed; using loaded globe/LiDAR elevations",
-        error
-      );
+  private toPlacedTree(tree: VegetationPoint, groundHeight: number): PlacedTree {
+    const treeHeight = isValidTreeHeight(tree.treeHeight) ? tree.treeHeight : DEFAULT_TREE_HEIGHT_M;
+    if (!isValidTreeHeight(tree.treeHeight)) {
+      console.warn("[Tree renderer] Invalid normalized height; using explicit default", {
+        id: tree.id,
+        receivedHeight: tree.treeHeight,
+      });
     }
+    return { tree, groundHeight, treeHeight };
+  }
 
-    return trees.map((tree, index) => {
-      const sampledHeight = sampled[index]?.height;
-      const loadedHeight = this.viewer.scene.globe.getHeight(cartographics[index]);
+  /**
+   * Synchronous, no network wait — groundHeightCache (a real previous
+   * sample) if present, else whatever globe/LiDAR elevation is already
+   * loaded for the current view, else the tree's own LiDAR groundHeight.
+   * Used to get trees on screen immediately; may be coarser than
+   * resolveTerrainPlacementPrecise below until that resolves.
+   */
+  private fastPlacement(trees: VegetationPoint[]): PlacedTree[] {
+    return trees.map((tree) => {
+      const cached = this.groundHeightCache.get(tree.id);
+      if (cached !== undefined) return this.toPlacedTree(tree, cached);
+      const cartographic = Cesium.Cartographic.fromDegrees(tree.longitude, tree.latitude);
+      const loadedHeight = this.viewer.scene.globe.getHeight(cartographic);
       const groundHeight =
-        (Number.isFinite(sampledHeight) ? sampledHeight : undefined) ??
         (Number.isFinite(loadedHeight) ? loadedHeight : undefined) ??
         (Number.isFinite(tree.groundHeight) ? tree.groundHeight : undefined) ??
         0;
-      if (
-        tree.groundHeight !== undefined &&
-        Number.isFinite(sampledHeight) &&
-        Math.abs(tree.groundHeight - sampledHeight) > 3
-      ) {
-        console.warn("[Tree placement] LiDAR DTM and Cesium terrain differ by >3 m", {
-          id: tree.id,
-          lidarGroundM: tree.groundHeight,
-          terrainGroundM: sampledHeight,
-        });
-      }
-      if (
-        !Number.isFinite(sampledHeight) &&
-        !Number.isFinite(loadedHeight) &&
-        !Number.isFinite(tree.groundHeight)
-      ) {
-        console.warn("[Tree placement] Missing ground elevation; using 0 m", {
-          id: tree.id,
-          latitude: tree.latitude,
-          longitude: tree.longitude,
-        });
-      }
-      const treeHeight = isValidTreeHeight(tree.treeHeight)
-        ? tree.treeHeight
-        : DEFAULT_TREE_HEIGHT_M;
-      if (!isValidTreeHeight(tree.treeHeight)) {
-        console.warn("[Tree renderer] Invalid normalized height; using explicit default", {
-          id: tree.id,
-          receivedHeight: tree.treeHeight,
-        });
-      }
-      return { tree, groundHeight, treeHeight };
+      return this.toPlacedTree(tree, groundHeight);
     });
+  }
+
+  /** Precise, most-detailed terrain heights — slow/network-dependent. Only samples trees missing from groundHeightCache; populates it for future calls. */
+  private async resolveTerrainPlacementPrecise(
+    trees: VegetationPoint[]
+  ): Promise<PlacedTree[]> {
+    const uncached = trees.filter((tree) => !this.groundHeightCache.has(tree.id));
+
+    if (uncached.length > 0) {
+      const cartographics = uncached.map((tree) =>
+        Cesium.Cartographic.fromDegrees(tree.longitude, tree.latitude)
+      );
+      let sampled: Cesium.Cartographic[] = [];
+      try {
+        sampled = await Cesium.sampleTerrainMostDetailed(
+          this.viewer.terrainProvider,
+          cartographics
+        );
+      } catch (error) {
+        console.warn(
+          "[Tree placement] Most-detailed terrain sampling failed; using loaded globe/LiDAR elevations",
+          error
+        );
+      }
+
+      uncached.forEach((tree, index) => {
+        const sampledHeight = sampled[index]?.height;
+        const loadedHeight = this.viewer.scene.globe.getHeight(cartographics[index]);
+        const groundHeight =
+          (Number.isFinite(sampledHeight) ? sampledHeight : undefined) ??
+          (Number.isFinite(loadedHeight) ? loadedHeight : undefined) ??
+          (Number.isFinite(tree.groundHeight) ? tree.groundHeight : undefined) ??
+          0;
+        if (
+          tree.groundHeight !== undefined &&
+          Number.isFinite(sampledHeight) &&
+          Math.abs(tree.groundHeight - sampledHeight) > 3
+        ) {
+          console.warn("[Tree placement] LiDAR DTM and Cesium terrain differ by >3 m", {
+            id: tree.id,
+            lidarGroundM: tree.groundHeight,
+            terrainGroundM: sampledHeight,
+          });
+        }
+        if (
+          !Number.isFinite(sampledHeight) &&
+          !Number.isFinite(loadedHeight) &&
+          !Number.isFinite(tree.groundHeight)
+        ) {
+          console.warn("[Tree placement] Missing ground elevation; using 0 m", {
+            id: tree.id,
+            latitude: tree.latitude,
+            longitude: tree.longitude,
+          });
+        }
+        this.groundHeightCache.set(tree.id, groundHeight);
+      });
+    }
+
+    return trees.map((tree) => this.toPlacedTree(tree, this.groundHeightCache.get(tree.id) ?? 0));
   }
 
   private logDiagnostics(placedTrees: PlacedTree[]): void {

@@ -243,6 +243,11 @@ function movementFrame(now: number): void {
           Cesium.Ellipsoid.WGS84,
           new Cesium.Cartesian3()
         );
+        // Safety net under requestRenderMode — this is a custom rAF loop,
+        // not Cesium's own controller/flight code, so don't rely solely on
+        // Cesium's own camera-changed auto-detection for something as
+        // sensitive as walking around indoors.
+        movementViewer.scene.requestRender();
       }
     }
   }
@@ -308,6 +313,7 @@ export function rotateIndoorCamera(viewer: Cesium.Viewer, angleRad: number, dura
     const eased = 1 - Math.pow(1 - t, 3);
     const heading = Cesium.Math.lerp(startHeading, targetHeading, eased);
     camera.setView({ orientation: { heading, pitch: camera.pitch, roll: 0 } });
+    viewer.scene.requestRender();
     if (t < 1) {
       activeRotationFrame = requestAnimationFrame(frame);
     } else {
@@ -345,6 +351,7 @@ export function stepIndoorHeight(viewer: Cesium.Viewer, signedDelta: number): vo
     const cartographic = Cesium.Cartographic.fromCartesian(camera.positionWC);
     cartographic.height = Cesium.Math.lerp(startHeight, targetHeight, t);
     camera.position = Cesium.Cartographic.toCartesian(cartographic, Cesium.Ellipsoid.WGS84, new Cesium.Cartesian3());
+    viewer.scene.requestRender();
     if (t < 1) {
       activeHeightFrame = requestAnimationFrame(frame);
     } else {
@@ -373,6 +380,11 @@ export function enforceIndoorHeight(viewer: Cesium.Viewer): void {
     Cesium.Ellipsoid.WGS84,
     new Cesium.Cartesian3()
   );
+  // This runs inside scene.postRender — i.e. AFTER a render already
+  // happened. Under requestRenderMode nothing else guarantees another
+  // render will follow just because the camera moved here, so without this
+  // the correction could sit applied-but-unrendered indefinitely.
+  viewer.scene.requestRender();
 }
 
 /**
@@ -388,8 +400,10 @@ export function enforceIndoorPitchClamp(viewer: Cesium.Viewer): void {
   const maxPitch = Cesium.Math.toRadians(IndoorMovementConfig.MAX_PITCH_DEG);
   if (camera.pitch > maxPitch) {
     camera.setView({ orientation: { heading: camera.heading, pitch: maxPitch, roll: 0 } });
+    viewer.scene.requestRender();
   } else if (camera.pitch < -maxPitch) {
     camera.setView({ orientation: { heading: camera.heading, pitch: -maxPitch, roll: 0 } });
+    viewer.scene.requestRender();
   }
 }
 

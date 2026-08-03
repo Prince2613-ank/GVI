@@ -62,6 +62,16 @@ const MIN_SPLASH_MS = 3000;
 // blocking on — see MIN_SPLASH_MS above).
 const ORBIT_WARMUP_MS = 500;
 
+// Render resolution multiplier — 1 preserves current visual quality exactly.
+// Optionally tunable via VITE_CESIUM_RESOLUTION_SCALE (e.g. "0.85") without
+// a code change, for lower-end devices where a slightly softer render is an
+// acceptable trade for GPU headroom. Left unset/1 by default.
+const CESIUM_RESOLUTION_SCALE = (() => {
+  const raw = import.meta.env.VITE_CESIUM_RESOLUTION_SCALE as string | undefined;
+  const parsed = raw ? Number(raw) : 1;
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 1 ? parsed : 1;
+})();
+
 // Provisional mask params used only for the few hundred ms between the OSM
 // Buildings tileset loading and CesiumViewer's live-sync effect applying the
 // real building transform — matches App.tsx's INITIAL_BUILDING so there's no
@@ -315,6 +325,36 @@ export function useCesium(): UseCesiumResult {
 
     viewerRef.current = viewer;
 
+    // --- Perf: only render when something actually changed, instead of
+    // every frame regardless of whether the scene is static. Cesium
+    // already auto-detects and requests a render for the vast majority of
+    // real changes (camera moves/flights, primitives/entities added or
+    // removed, tiles finishing load, imagery/terrain updates) — this is
+    // safe by default. The few code paths that mutate rendered state in
+    // ways Cesium's own change-detection doesn't see (raw per-instance
+    // geometry attribute writes, and anything reading canvas pixels
+    // synchronously right after a change) call viewer.scene.requestRender()
+    // or viewer.scene.render() explicitly themselves — see TreeRenderer.ts's
+    // hover highlight and useCapturedView.ts's capture path.
+    viewer.scene.requestRenderMode = true;
+    viewer.scene.maximumRenderTimeChange = Infinity;
+
+    // Matches Cesium's own defaults (all off) — set explicitly so behavior
+    // doesn't silently change on a future Cesium upgrade, and so it's
+    // documented that these were deliberately left off rather than
+    // overlooked. No visual change versus current behavior.
+    viewer.shadows = false;
+    viewer.scene.shadowMap.enabled = false;
+    viewer.scene.highDynamicRange = false;
+    viewer.scene.globe.enableLighting = false;
+
+    // Configurable render resolution — CESIUM_RESOLUTION_SCALE below
+    // defaults to 1 (no change from current behavior). Lowering it (e.g.
+    // 0.85-0.9) trades a small amount of sharpness for meaningfully less
+    // GPU fill-rate work on constrained devices; left at 1 here so nothing
+    // about current visual quality changes unless deliberately tuned.
+    viewer.resolutionScale = CESIUM_RESOLUTION_SCALE;
+
     // Cesium's default render loop treats ANY single-frame render error as
     // fatal: it permanently sets useDefaultRenderLoop = false and injects a
     // ".cesium-widget-errorPanel" element (confirmed by reading Cesium's
@@ -347,6 +387,11 @@ export function useCesium(): UseCesiumResult {
       requestAnimationFrame(() => {
         if (viewer.isDestroyed()) return;
         viewer.useDefaultRenderLoop = true;
+        // Under requestRenderMode, resuming the loop alone doesn't
+        // guarantee a "changed" flag is set — force one real frame so
+        // recovery doesn't leave the canvas showing the stale pre-error
+        // content until something else happens to trigger a render.
+        viewer.scene.requestRender();
       });
     });
     errorPanelObserver.observe(viewer.container, { childList: true });
@@ -429,6 +474,12 @@ export function useCesium(): UseCesiumResult {
         const eased = 1 - Math.pow(1 - t, 3); // ease-out — settles gently instead of stopping abruptly
         const heading = Cesium.Math.lerp(startHeading, endHeading, eased);
         viewer.camera.lookAt(center, new Cesium.HeadingPitchRange(heading, pitch, range));
+        // Safety net under requestRenderMode — camera.lookAt should already
+        // be auto-detected as a camera change, but this custom rAF loop
+        // (not Cesium's own flight/controller code) is exactly the kind of
+        // path worth not trusting blindly for something as visible as the
+        // very first thing a user sees.
+        viewer.scene.requestRender();
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {

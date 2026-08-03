@@ -62,7 +62,12 @@ export function BalconyViewpointNavigator({
   vegetationErrorMessage,
   manualVegetationCollection,
 }: BalconyViewpointNavigatorProps) {
-  const [isMinimized, setIsMinimized] = useState(false);
+  // Starts collapsed on narrow/mobile screens — the panel is a fixed
+  // full-height 230px sidebar, which eats most of a phone's viewport if
+  // left open by default the way it is on desktop.
+  const [isMinimized, setIsMinimized] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches
+  );
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [gallerySearch, setGallerySearch] = useState("");
 
@@ -308,6 +313,18 @@ export function BalconyViewpointNavigator({
           ? "Analyzing GVI…"
           : "Analyse GVI";
 
+  // Playful copy for the big centered overlay only — the small button label
+  // above stays plain/functional, this is the "hey, something's happening"
+  // moment so it gets to have a little personality.
+  const gviOverlayLabel =
+    gviPipelineStage === "vegetation"
+      ? "🌱 Sniffing out nearby trees & greenery…"
+      : gviPipelineStage === "capturing"
+        ? "📸 Say cheese! Capturing your view…"
+        : gviPipelineStage === "analyzing"
+          ? "🧮 Counting every leaf in sight…"
+          : "";
+
   const floorHeightDeltaM = FLOOR_HEIGHT_M * building.scale;
 
   // Gallery: every side/flat combo that resolves to a point (saved or
@@ -383,7 +400,8 @@ export function BalconyViewpointNavigator({
     durationSeconds: number
   ): Promise<void> {
     if (!viewer) return Promise.resolve();
-    const camera = viewer.camera;
+    const activeViewer = viewer;
+    const camera = activeViewer.camera;
     const startPosition = Cesium.Cartesian3.clone(camera.positionWC);
     const startHeading = camera.heading;
     const pitch = Cesium.Math.toRadians(-5);
@@ -397,6 +415,9 @@ export function BalconyViewpointNavigator({
         const position = Cesium.Cartesian3.lerp(startPosition, destination, eased, new Cesium.Cartesian3());
         const heading = Cesium.Math.lerp(startHeading, headingRad, eased);
         camera.setView({ destination: position, orientation: { heading, pitch, roll: 0 } });
+        // Safety net under requestRenderMode — custom rAF loop, not
+        // Cesium's own flyTo/controller code.
+        activeViewer.scene.requestRender();
         if (t < 1) {
           requestAnimationFrame(frame);
         } else {
@@ -746,10 +767,16 @@ export function BalconyViewpointNavigator({
   useEffect(() => {
     function onMove(event: MouseEvent) {
       if (!dragState.current.dragging) return;
-      setPosition({
-        left: event.clientX - dragState.current.offsetX,
-        top: event.clientY - dragState.current.offsetY,
-      });
+      // Clamped to the viewport — without this, dragging the header past
+      // the screen edge left the panel stuck almost entirely off-canvas
+      // with no way to drag it back. 40px keeps a grabbable strip of the
+      // header on screen at any edge.
+      const margin = 40;
+      const maxLeft = Math.max(0, window.innerWidth - margin);
+      const maxTop = Math.max(0, window.innerHeight - margin);
+      const left = Math.min(maxLeft, Math.max(0, event.clientX - dragState.current.offsetX));
+      const top = Math.min(maxTop, Math.max(0, event.clientY - dragState.current.offsetY));
+      setPosition({ left, top });
     }
     function onUp() {
       dragState.current.dragging = false;
@@ -764,17 +791,27 @@ export function BalconyViewpointNavigator({
 
   return (
     <>
+    {isMinimized ? (
+      <button
+        type="button"
+        className="balcony-viewpoint-nav__hamburger"
+        title="Open Balcony Viewpoints"
+        onClick={() => setIsMinimized(false)}
+      >
+        ☰
+      </button>
+    ) : (
     <div className="balcony-viewpoint-nav" style={{ top: position.top, left: position.left }}>
       <div className="balcony-viewpoint-nav__header" onMouseDown={onHeaderMouseDown}>
         <span>Balcony Viewpoints</span>
         <button
           type="button"
           className="minimize-btn"
-          title={isMinimized ? "Expand" : "Minimize"}
+          title="Minimize"
           onMouseDown={(event) => event.stopPropagation()}
-          onClick={() => setIsMinimized((value) => !value)}
+          onClick={() => setIsMinimized(true)}
         >
-          {isMinimized ? "▢" : "—"}
+          ✕
         </button>
       </div>
       {!isMinimized && (
@@ -887,6 +924,7 @@ export function BalconyViewpointNavigator({
         </div>
       )}
     </div>
+    )}
 
     {isTouring && (
       <div className="tour-control-bar">
@@ -1070,6 +1108,20 @@ export function BalconyViewpointNavigator({
           </div>
         </div>
         )}
+      </div>
+    )}
+
+    {gviPipelineStage !== "idle" && (
+      <div className="gvi-analyzing-overlay">
+        <div className="gvi-analyzing-overlay__card">
+          <span className="gvi-analyzing-overlay__leaf">🍃</span>
+          <span className="gvi-analyzing-overlay__label">{gviOverlayLabel}</span>
+          <span className="gvi-analyzing-overlay__dots">
+            <span />
+            <span />
+            <span />
+          </span>
+        </div>
       </div>
     )}
 

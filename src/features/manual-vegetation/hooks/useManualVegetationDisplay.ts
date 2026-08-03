@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Cesium from "cesium";
 import { ManualVegetationOverlay } from "../projection/VegetationOverlay";
 import { ManualVegetationPolygon } from "../types/ManualVegetationTypes";
@@ -12,6 +12,14 @@ import { ManualVegetationPolygon } from "../types/ManualVegetationTypes";
  */
 export function useManualVegetationDisplay(viewer: Cesium.Viewer | null) {
   const overlayRef = useRef<ManualVegetationOverlay | null>(null);
+  // renderSaved's own chunked, far-to-near progressive render (see
+  // VegetationOverlay.ts) already gets polygons on screen chunk by chunk
+  // instead of all-at-once — this tracks whether that whole pass (fast
+  // paint + background precise-height upgrade) is still in flight. Callers
+  // (App.tsx) call showPolygons fire-and-forget, so without this there's
+  // no way to know the render is still settling after the caller's own
+  // loading state has already moved on.
+  const [isLoadingPolygons, setIsLoadingPolygons] = useState(false);
 
   useEffect(() => {
     if (!viewer) return;
@@ -24,12 +32,13 @@ export function useManualVegetationDisplay(viewer: Cesium.Viewer | null) {
   }, [viewer]);
 
   const showPolygons = useCallback((polygons: ManualVegetationPolygon[]) => {
-    overlayRef.current?.renderSaved(polygons, null);
+    setIsLoadingPolygons(true);
+    void overlayRef.current?.renderSaved(polygons, null).finally(() => setIsLoadingPolygons(false));
   }, []);
 
   const hidePolygons = useCallback(() => {
     overlayRef.current?.renderSaved([], null);
   }, []);
 
-  return { showPolygons, hidePolygons };
+  return { showPolygons, hidePolygons, isLoadingPolygons };
 }

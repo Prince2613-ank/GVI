@@ -207,7 +207,7 @@ export default function App() {
   // This is now the ONLY thing that renders saved manual vegetation polygons
   // on the globe — the debug panel that used to own a second overlay
   // instance (for live draft/handle editing) is no longer mounted in the UI.
-  const { showPolygons: showManualVegetation } = useManualVegetationDisplay(
+  const { showPolygons: showManualVegetation, isLoadingPolygons } = useManualVegetationDisplay(
     isViewerReady ? viewerRef.current : null
   );
 
@@ -286,6 +286,14 @@ export default function App() {
         perTreeGviResult={canopyGviResult?.perTreeResult ?? null}
       />
       <TreeHoverPopup viewer={viewerRef.current} vegetationLayerRef={vegetationLayerRef} />
+      {isLoadingPolygons && (
+        <div className="polygon-settling-overlay">
+          <div className="polygon-settling-overlay__card">
+            <span className="polygon-settling-overlay__icon">🐌🌿</span>
+            <span>Nudging polygons onto solid ground…</span>
+          </div>
+        </div>
+      )}
       <GVIProjectionOverlay
         viewer={viewerRef.current}
         trees={

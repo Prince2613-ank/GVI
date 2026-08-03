@@ -78,6 +78,11 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Single source of truth for the logo circle's size — the spinner ring
+     below derives its size from this too, so it stays flush around the
+     logo at any viewport width instead of the two drifting out of sync on
+     mobile (ring was a fixed 376px while the logo circle shrank via vw). */
+  --gvi-logo-size: min(360px, 62vw);
 }
 
 /* A real animated spinner, distinct from the artwork's own static progress
@@ -97,8 +102,8 @@ body,
    gives the ring a bit of visual lift. */
 .loading-overlay__spinner {
   position: absolute;
-  width: 376px;
-  height: 376px;
+  width: calc(var(--gvi-logo-size) + 16px);
+  height: calc(var(--gvi-logo-size) + 16px);
   border-radius: 50%;
   border: 8px solid rgba(46, 125, 50, 0.25);
   border-top-color: #1b5e20;
@@ -128,9 +133,8 @@ body,
    was fighting the ring's circular shape rather than belonging inside it. */
 .loading-overlay__logo-circle {
   position: relative;
-  width: 360px;
-  height: 360px;
-  max-width: 62vw;
+  width: var(--gvi-logo-size);
+  height: var(--gvi-logo-size);
   border-radius: 50%;
   overflow: hidden;
   background: #ffffff;
@@ -464,4 +468,52 @@ body,
 .facade-thumb span {
   font-size: 10px;
   color: #cfd8dc;
+}
+
+/* Small, playful "still settling" indicator for manual vegetation polygons'
+   background precise-height upgrade + chunked far-to-near reveal (see
+   VegetationOverlay.ts) — polygons already appear progressively during
+   this window, this just flags that the render is still in flight.
+   Deliberately lighter-weight than the big centered GVI analyzing overlay
+   (bottom-corner, not blocking) since polygons are already visible and
+   usable during this window. */
+.polygon-settling-overlay {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 250;
+  pointer-events: none;
+}
+
+.polygon-settling-overlay__card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: rgba(20, 28, 22, 0.92);
+  border: 1px solid #3a4840;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  color: #a5d6a7;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.polygon-settling-overlay__icon {
+  font-size: 16px;
+  display: inline-block;
+  animation: polygon-settling-wiggle 1.4s ease-in-out infinite;
+}
+
+@keyframes polygon-settling-wiggle {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(2px) rotate(4deg);
+  }
+  75% {
+    transform: translateX(-2px) rotate(-4deg);
+  }
 }

@@ -32,4 +32,8 @@ export const IndoorCameraConfig = {
   ROTATE_STEP_DEG: 30,
   /** Seconds the rotate-button turn takes, eased — never instant. */
   ROTATE_DURATION: 0.25,
+  /** Degrees the left/right pad buttons nudge the view per press — position never changes, only heading. */
+  NUDGE_ROTATE_STEP_DEG: 5,
+  /** Seconds the left/right nudge-rotate takes, eased (ease-out) — never instant. */
+  NUDGE_ROTATE_DURATION: 0.2,
 } as const;

@@ -12,7 +12,7 @@ import "./IndoorNavigation.css";
  * — this component never touches the Cesium camera directly.
  */
 export function IndoorNavigationOverlay() {
-  const { isIndoor, forwardHandlers, backwardHandlers, leftHandlers, rightHandlers, rotateClockwise } =
+  const { isIndoor, forwardHandlers, backwardHandlers, nudgeRotateLeft, nudgeRotateRight, rotateClockwise } =
     useIndoorMovement();
 
   if (!isIndoor) return null;
@@ -28,21 +28,29 @@ export function IndoorNavigationOverlay() {
             tooltip="Move Forward (0.5 m)"
             {...forwardHandlers}
           />
-          <MovementButton
-            className="indoor-nav__btn--left"
-            icon={<ArrowLeftIcon className="indoor-nav__icon" />}
-            label="Move left"
-            tooltip="Move Left"
-            {...leftHandlers}
-          />
+          {/* Single click, not hold-to-strafe — rotates the view in place by a
+              small fixed angle (IndoorCameraConfig.NUDGE_ROTATE_STEP_DEG),
+              same interaction pattern as the center rotate button, not
+              continuous movement. */}
+          <button
+            type="button"
+            className="indoor-nav__btn indoor-nav__btn--left"
+            aria-label="Rotate view left 5 degrees"
+            title="Rotate Left 5°"
+            onClick={nudgeRotateLeft}
+          >
+            <ArrowLeftIcon className="indoor-nav__icon" />
+          </button>
           <RotateButton onRotate={rotateClockwise} />
-          <MovementButton
-            className="indoor-nav__btn--right"
-            icon={<ArrowRightIcon className="indoor-nav__icon" />}
-            label="Move right"
-            tooltip="Move Right"
-            {...rightHandlers}
-          />
+          <button
+            type="button"
+            className="indoor-nav__btn indoor-nav__btn--right"
+            aria-label="Rotate view right 5 degrees"
+            title="Rotate Right 5°"
+            onClick={nudgeRotateRight}
+          >
+            <ArrowRightIcon className="indoor-nav__icon" />
+          </button>
           <MovementButton
             className="indoor-nav__btn--down"
             icon={<ArrowDownIcon className="indoor-nav__icon" />}

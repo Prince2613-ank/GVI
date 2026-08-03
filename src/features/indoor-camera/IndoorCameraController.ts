@@ -189,6 +189,25 @@ function rotateClockwise(): void {
   );
 }
 
+/** Left/right pad buttons — nudges the view by NUDGE_ROTATE_STEP_DEG (yaw only, position never changes), eased over NUDGE_ROTATE_DURATION. Negative = counter-clockwise. */
+function nudgeRotateLeft(): void {
+  if (!activeViewer) return;
+  rotateIndoorCamera(
+    activeViewer,
+    -Cesium.Math.toRadians(IndoorCameraConfig.NUDGE_ROTATE_STEP_DEG),
+    IndoorCameraConfig.NUDGE_ROTATE_DURATION
+  );
+}
+
+function nudgeRotateRight(): void {
+  if (!activeViewer) return;
+  rotateIndoorCamera(
+    activeViewer,
+    Cesium.Math.toRadians(IndoorCameraConfig.NUDGE_ROTATE_STEP_DEG),
+    IndoorCameraConfig.NUDGE_ROTATE_DURATION
+  );
+}
+
 export const indoorCamera = {
   enter,
   exit,
@@ -201,6 +220,8 @@ export const indoorCamera = {
   startRight,
   stopStrafe,
   rotateClockwise,
+  nudgeRotateLeft,
+  nudgeRotateRight,
   setDebugEnabled,
   isDebugEnabled,
   getActiveZoneLimits,

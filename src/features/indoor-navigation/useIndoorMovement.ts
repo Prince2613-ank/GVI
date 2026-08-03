@@ -180,15 +180,16 @@ export function useIndoorMovement() {
 
   const forward = useHold(indoorCamera.startForward, indoorCamera.stopForwardBackward);
   const backward = useHold(indoorCamera.startBackward, indoorCamera.stopForwardBackward);
-  const left = useHold(indoorCamera.startLeft, indoorCamera.stopStrafe);
-  const right = useHold(indoorCamera.startRight, indoorCamera.stopStrafe);
 
   return {
     isIndoor,
     forwardHandlers: forward,
     backwardHandlers: backward,
-    leftHandlers: left,
-    rightHandlers: right,
+    // Single-press nudge-rotate, not hold-to-strafe — position never
+    // changes, only heading, so this doesn't need useHold's press/release
+    // ramp (same reasoning as the center rotate button).
+    nudgeRotateLeft: indoorCamera.nudgeRotateLeft,
+    nudgeRotateRight: indoorCamera.nudgeRotateRight,
     rotateClockwise: indoorCamera.rotateClockwise,
   };
 }

@@ -31,9 +31,14 @@ export function useManualVegetationDisplay(viewer: Cesium.Viewer | null) {
     };
   }, [viewer]);
 
-  const showPolygons = useCallback((polygons: ManualVegetationPolygon[]) => {
+  // Returns the render promise so callers that need polygons to be fully
+  // on screen — not just "started" — before proceeding (e.g. capturing a
+  // screenshot for GVI) can await it instead of firing and forgetting.
+  const showPolygons = useCallback((polygons: ManualVegetationPolygon[]): Promise<void> => {
     setIsLoadingPolygons(true);
-    void overlayRef.current?.renderSaved(polygons, null).finally(() => setIsLoadingPolygons(false));
+    const done = overlayRef.current?.renderSaved(polygons, null) ?? Promise.resolve();
+    void done.finally(() => setIsLoadingPolygons(false));
+    return done;
   }, []);
 
   const hidePolygons = useCallback(() => {

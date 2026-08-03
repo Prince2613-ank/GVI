@@ -207,7 +207,7 @@ export default function App() {
   // This is now the ONLY thing that renders saved manual vegetation polygons
   // on the globe — the debug panel that used to own a second overlay
   // instance (for live draft/handle editing) is no longer mounted in the UI.
-  const { showPolygons: showManualVegetation, isLoadingPolygons } = useManualVegetationDisplay(
+  const { showPolygons: showManualVegetation } = useManualVegetationDisplay(
     isViewerReady ? viewerRef.current : null
   );
 
@@ -225,8 +225,12 @@ export default function App() {
     // Render the manual polygons FIRST so they're already on the globe
     // before the tree fetch adds hundreds of canopy ground-primitives —
     // otherwise the newly-loaded canopies can visually paint over the
-    // polygon fill in the same frame.
-    showManualVegetation(listManualVegetationPolygons(manualVegetationCollection));
+    // polygon fill in the same frame. Awaited (not fire-and-forget) so
+    // callers — the balcony panel's "Analyse GVI" flow, which captures a
+    // screenshot and computes GVI right after this resolves — never
+    // capture/preview/calculate against a scene where polygons are still
+    // mid-render.
+    await showManualVegetation(listManualVegetationPolygons(manualVegetationCollection));
     const nextSummary = await refetch();
     // Calling setData directly (rather than relying on the `summary` prop
     // reaching <VegetationLayer> through a React re-render) and awaiting it
@@ -286,14 +290,6 @@ export default function App() {
         perTreeGviResult={canopyGviResult?.perTreeResult ?? null}
       />
       <TreeHoverPopup viewer={viewerRef.current} vegetationLayerRef={vegetationLayerRef} />
-      {isLoadingPolygons && (
-        <div className="polygon-settling-overlay">
-          <div className="polygon-settling-overlay__card">
-            <span className="polygon-settling-overlay__icon">🐌🌿</span>
-            <span>Nudging polygons onto solid ground…</span>
-          </div>
-        </div>
-      )}
       <GVIProjectionOverlay
         viewer={viewerRef.current}
         trees={

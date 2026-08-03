@@ -478,9 +478,15 @@ body,
    (bottom-corner, not blocking) since polygons are already visible and
    usable during this window. */
 .polygon-settling-overlay {
+  /* Offset past the Balcony Viewpoints sidebar's fixed 230px width — it
+     used to sit at bottom-left flush against the screen edge, landing
+     right behind/against that sidebar and blending into it. Bottom-right
+     was tried but collides with the indoor-movement d-pad
+     (IndoorNavigation.css, bottom:24px/right:24px) — this is the one
+     corner clear of every other fixed overlay. */
   position: fixed;
-  bottom: 16px;
-  left: 16px;
+  bottom: 20px;
+  left: 250px;
   z-index: 250;
   pointer-events: none;
 }
@@ -489,18 +495,18 @@ body,
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-radius: 20px;
-  background: rgba(20, 28, 22, 0.92);
-  border: 1px solid #3a4840;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  background: rgba(20, 28, 22, 0.96);
+  border: 1px solid #4caf50;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(76, 175, 80, 0.15);
   color: #a5d6a7;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .polygon-settling-overlay__icon {
-  font-size: 16px;
+  font-size: 18px;
   display: inline-block;
   animation: polygon-settling-wiggle 1.4s ease-in-out infinite;
 }
@@ -515,5 +521,14 @@ body,
   }
   75% {
     transform: translateX(-2px) rotate(-4deg);
+  }
+}
+
+/* On mobile the Balcony Viewpoints sidebar starts collapsed to just a
+   hamburger button (BalconyViewpointNavigator.tsx), not the full 230px
+   panel — the same left offset there would leave a big empty gap. */
+@media (max-width: 640px) {
+  .polygon-settling-overlay {
+    left: 16px;
   }
 }

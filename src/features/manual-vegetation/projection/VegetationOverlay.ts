@@ -347,16 +347,28 @@ export class ManualVegetationOverlay {
   }
 
   /**
-   * Two-phase render: draws immediately using whatever terrain detail is
-   * already loaded (synchronous, no network wait), then upgrades to precise
-   * sampled heights in the background. Right after a camera rotation ends,
-   * the most-detailed tiles for the new view often haven't streamed in yet
-   * — blocking the whole polygon render on that (the old behavior) is what
-   * made polygons take a while to appear right after rotating. Now they
-   * appear instantly at a "close enough" height and quietly self-correct a
-   * moment later only if the precise height actually differs. Both passes
-   * go through drawSavedChunked, so both also get the far-to-near
-   * progressive reveal instead of popping in all at once.
+   * Draws once if the precise height is already known cheaply (local
+   * cache, or the shared backend cache answering within a short race
+   * window); otherwise falls back to a two-phase render: draws immediately
+   * using whatever terrain detail is already loaded (synchronous, no
+   * network wait), then upgrades to precise sampled heights in the
+   * background.
+   *
+   * The single-draw fast path matters because drawing twice is expensive
+   * regardless of WHERE the second height came from — Cesium tessellates
+   * the fill geometry on a worker every time drawSavedChunked runs, and
+   * that rebuild cost is the same whether the precise height took 2
+   * seconds (a real sampleTerrainMostDetailed call) or 50ms (a cache hit).
+   * Without this, an already-cached-in-the-database height still looked
+   * "slow," because the fast (approximate) pass drew and tessellated
+   * first regardless, and the precise pass almost always differed from it
+   * by more than the 5cm threshold, triggering a second full rebuild.
+   *
+   * Right after a camera rotation ends, the most-detailed tiles for the
+   * new view often haven't streamed in yet — that's exactly the case the
+   * two-phase fallback below still covers (appear instantly at a "close
+   * enough" height, self-correct once precise data actually needs a real
+   * terrain sample).
    */
   async renderSaved(polygons: ManualVegetationPolygon[], selectedId: string | null): Promise<void> {
     const generation = ++this.renderGeneration;
@@ -366,6 +378,30 @@ export class ManualVegetationOverlay {
       this.savedPrimitives = [];
       this.outlineIds.forEach((id) => this.viewer.entities.removeById(id));
       this.outlineIds = [];
+      return;
+    }
+
+    const allLocallyCached = polygons.every((p) => this.heightCache.has(cacheKey(p)));
+    if (allLocallyCached) {
+      const heights = new Map(polygons.map((p) => [p.id, this.heightCache.get(cacheKey(p))!]));
+      await this.drawSavedChunked(polygons, selectedId, heights, generation);
+      return;
+    }
+
+    // Not all in the (synchronous, free) local cache — race a quick shared-
+    // backend lookup against a short timeout. If every polygon resolves
+    // within that window, this is still a single-draw path; if the backend
+    // is slow/unreachable or only partially answers, fall through to the
+    // fast-paint-now two-phase render below instead of blocking on it.
+    const quickResolved = await Promise.race([
+      sampleGroundHeightsPrecise(this.viewer, polygons, this.heightCache).then((heights) =>
+        polygons.every((p) => this.heightCache.has(cacheKey(p))) ? heights : null
+      ),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 350)),
+    ]);
+    if (generation !== this.renderGeneration) return;
+    if (quickResolved) {
+      await this.drawSavedChunked(polygons, selectedId, quickResolved, generation);
       return;
     }
 

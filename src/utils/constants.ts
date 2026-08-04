@@ -14,21 +14,22 @@ export const BUILDING_MODEL_URL = "/models/hdsfds.glb";
 // The initial camera pose shown on page load: an oblique aerial view of the
 // whole building and its street-level surroundings from the northeast,
 // tilted down, instead of a flat straight-down top-down shot.
+//
+// This is an ORBIT pose (viewer.camera.lookAt / flyToBoundingSphere with a
+// HeadingPitchRange), not a free camera position — rangeM is purely "how
+// far back from the building," fully independent of headingDeg/pitchDeg
+// ("which angle to view it from"). A free lon/lat/height pose used to be
+// here instead; changing its implied distance from the building also
+// silently changed how centered the building looked on screen (since a
+// free pose isn't re-aimed at the building as it moves), which is why
+// "pull back" and "zoom" felt tangled together — they're now the same,
+// single, unambiguous rangeM control.
 export const DEFAULT_VIEW = {
-  longitude: -73.9900642,
-  latitude: 40.7628851,
-  height: 165.94,
-  headingDeg: 297.1,
-  pitchDeg: -31.4,
+  rangeM: 648.57,
+  headingDeg: 298.14,
+  pitchDeg: -41.88,
 };
 
-// Measured directly from the GLB's "Windows" mesh geometry, not assumed:
-// the vertical vertex density (window-band mullions) has its strongest
-// period at ~4.6m via autocorrelation, over a ~177m window-covered span —
-// implying ~39 floors, not the originally assumed 40 at 3.2m. The
-// difference between that 177m and the building's full 212m height is the
-// windowless double-height lobby base and the rooftop parapet/sign band
-// visible in the model (neither has a repeating window band to measure).
 export const FLOOR_HEIGHT_M = 4.6;
 export const TOTAL_FLOORS = 10;
 export const EYE_HEIGHT_M = 1.6;

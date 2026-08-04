@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import balconyViewpointsRouter from "./routes/balconyViewpoints";
 import mediaRouter from "./routes/media";
+import vegetationHeightsRouter from "./routes/vegetationHeights";
 import { pool } from "./db/client";
 import { errorHandler } from "./middleware/errorHandler";
 import { resumeUnfinishedOnBoot } from "./services/balconyGeneration/generationQueue";
@@ -31,6 +32,7 @@ app.get("/api/health", async (_req, res) => {
 
 app.use("/api/balcony-viewpoints", balconyViewpointsRouter);
 app.use("/api/media", mediaRouter);
+app.use("/api/vegetation-heights", vegetationHeightsRouter);
 
 app.use(errorHandler);
 

@@ -470,3 +470,115 @@ body,
   color: #cfd8dc;
 }
 
+
+.building-pos-editor {
+  position: fixed;
+  z-index: 55;
+  width: 220px;
+  background: rgba(24, 30, 26, 0.96);
+  color: #eaeaea;
+  border: 1px solid #3a4840;
+  border-radius: 10px;
+  font-size: 12px;
+  box-shadow: 4px 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.building-pos-editor__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #a5d6a7;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid #3a4840;
+  cursor: move;
+  user-select: none;
+  border-radius: 10px 10px 0 0;
+}
+
+.building-pos-editor__body {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.building-pos-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #9aa4ad;
+}
+
+.building-pos-editor__row {
+  display: flex;
+  gap: 4px;
+}
+
+.building-pos-editor__row input {
+  flex: 1;
+  min-width: 0;
+  background: #1a241a;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 5px;
+  padding: 5px 6px;
+  font-size: 12px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.building-pos-editor__row button {
+  width: 24px;
+  flex-shrink: 0;
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.building-pos-editor__row button:hover {
+  background: #2e7d32;
+  border-color: #66bb6a;
+}
+
+.building-pos-editor__hint {
+  margin: 0;
+  font-size: 10.5px;
+  color: #6b746c;
+  font-style: italic;
+}
+
+.building-pos-editor__divider {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b746c;
+  border-top: 1px solid #3a4840;
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+.building-pos-editor__readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 8px;
+  font-size: 11px;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+}
+
+.building-pos-editor__readout span:nth-child(odd) {
+  color: #9aa4ad;
+}
+
+.building-pos-editor__readout span:nth-child(even) {
+  color: #eaeaea;
+  text-align: right;
+}

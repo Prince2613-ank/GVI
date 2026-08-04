@@ -81,6 +81,13 @@ export interface GvVegetationMask {
   created_at: string;
 }
 
+export interface GvManualVegetationHeight {
+  polygon_id: string;
+  client_updated_at: string;
+  height_m: number;
+  resolved_at: string;
+}
+
 export interface GvProcessingJob {
   id: string;
   viewpoint_id: string;

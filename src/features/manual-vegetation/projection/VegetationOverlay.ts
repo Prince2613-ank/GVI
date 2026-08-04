@@ -1,6 +1,7 @@
 import * as Cesium from "cesium";
 import { LonLat, ManualVegetationPolygon } from "../types/ManualVegetationTypes";
 import { computePolygonCentroid } from "../services/PolygonGeometry";
+import { lookupVegetationHeights, saveVegetationHeights } from "../services/vegetationHeightApi";
 
 // Matches TreeRenderer's actual canopy palette (see treeSpecies.ts's
 // GENERIC profile: HSL [0.32, 0.42, 0.3], a muted natural forest green) —
@@ -32,6 +33,34 @@ const POLYGON_HEIGHT_M = 10;
 
 function toCartesianArray(positions: LonLat[], heightM: number): Cesium.Cartesian3[] {
   return positions.map((p) => Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, heightM));
+}
+
+// Persists resolved terrain heights to localStorage — the polygons
+// themselves were already saved there, but the expensive part (sampling
+// real terrain elevation for each one) used to live only in an in-memory
+// Map, redone from scratch on every single page load/reload. Terrain
+// doesn't move, so once a polygon's height is known it's known forever
+// (until the polygon's own position changes, which invalidates its cache
+// entry via the id:updatedAt key) — no reason to keep re-querying it.
+const HEIGHT_CACHE_STORAGE_KEY = "manual-veg-height-cache:v1";
+
+function loadPersistedHeightCache(): Map<string, number> {
+  try {
+    const raw = localStorage.getItem(HEIGHT_CACHE_STORAGE_KEY);
+    if (!raw) return new Map();
+    const parsed: Record<string, number> = JSON.parse(raw);
+    return new Map(Object.entries(parsed));
+  } catch {
+    return new Map();
+  }
+}
+
+function savePersistedHeightCache(cache: Map<string, number>): void {
+  try {
+    localStorage.setItem(HEIGHT_CACHE_STORAGE_KEY, JSON.stringify(Object.fromEntries(cache)));
+  } catch {
+    // Storage full/unavailable — persistence is a pure optimization, safe to skip.
+  }
 }
 
 /** Safety cap so awaiting tessellation readiness can never hang forever if a primitive's worker-side build stalls. */
@@ -110,7 +139,29 @@ async function sampleGroundHeightsPrecise(
   polygons: ManualVegetationPolygon[],
   cache: Map<string, number>
 ): Promise<Map<string, number>> {
-  const uncached = polygons.filter((p) => !cache.has(cacheKey(p)));
+  let uncached = polygons.filter((p) => !cache.has(cacheKey(p)));
+
+  // Check the shared backend cache next — a real terrain sample
+  // (sampleTerrainMostDetailed below) is a slow, tile-dependent network
+  // call; if ANY previous visitor (any browser, not just this one) already
+  // resolved this exact polygon+position, reuse that instead of re-doing
+  // the measurement ourselves.
+  if (uncached.length > 0) {
+    try {
+      const resolved = await lookupVegetationHeights(
+        uncached.map((p) => ({ polygonId: p.id, clientUpdatedAt: p.updatedAt }))
+      );
+      for (const { polygonId, clientUpdatedAt, heightM } of resolved) {
+        cache.set(`${polygonId}:${clientUpdatedAt}`, heightM);
+      }
+      uncached = uncached.filter((p) => !cache.has(cacheKey(p)));
+    } catch (error) {
+      // Backend unreachable — fall through to real terrain sampling below,
+      // same as any other network failure this module already tolerates.
+      // eslint-disable-next-line no-console
+      console.warn("[ManualVegetation] Backend height lookup failed; sampling terrain directly", error);
+    }
+  }
 
   if (uncached.length > 0) {
     const cartographics = uncached.map((polygon) => {
@@ -129,6 +180,7 @@ async function sampleGroundHeightsPrecise(
       );
     }
 
+    const newlyResolved: { polygonId: string; clientUpdatedAt: number; heightM: number }[] = [];
     uncached.forEach((polygon, index) => {
       const sampledHeight = sampled[index]?.height;
       const loadedHeight = viewer.scene.globe.getHeight(cartographics[index]);
@@ -136,7 +188,21 @@ async function sampleGroundHeightsPrecise(
         (Number.isFinite(sampledHeight) ? sampledHeight : undefined) ??
         (Number.isFinite(loadedHeight) ? loadedHeight : undefined) ??
         0;
-      cache.set(cacheKey(polygon), height + HEIGHT_OFFSET_M);
+      const heightM = height + HEIGHT_OFFSET_M;
+      cache.set(cacheKey(polygon), heightM);
+      newlyResolved.push({ polygonId: polygon.id, clientUpdatedAt: polygon.updatedAt, heightM });
+    });
+    // Persist right away — a newly-resolved height should survive a reload
+    // even if the user navigates away before this polygon set is touched
+    // again.
+    savePersistedHeightCache(cache);
+    // Fire-and-forget: pushes this measurement up so every FUTURE visitor
+    // (not just this browser) skips re-sampling terrain for these exact
+    // polygons too. A failure here just means the next visitor re-measures
+    // — never something worth blocking or retrying for.
+    void saveVegetationHeights(newlyResolved).catch((error) => {
+      // eslint-disable-next-line no-console
+      console.warn("[ManualVegetation] Failed to save resolved heights to the backend", error);
     });
   }
 
@@ -177,8 +243,9 @@ export class ManualVegetationOverlay {
   // `id:updatedAt` so a polygon only re-samples terrain when its own
   // position actually changes, instead of every polygon re-sampling on
   // every renderSaved call (e.g. dragging one vertex was re-sampling
-  // terrain for ALL saved polygons on every mouse-move).
-  private readonly heightCache = new Map<string, number>();
+  // terrain for ALL saved polygons on every mouse-move). Seeded from
+  // localStorage so this survives page reloads too, not just this session.
+  private readonly heightCache = loadPersistedHeightCache();
 
   constructor(private readonly viewer: Cesium.Viewer) {
     viewer.scene.primitives.add(this.primitives);

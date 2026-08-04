@@ -162,18 +162,21 @@ export function maskOsmBuildingsNearSite(
   });
 }
 
-// Cesium's default maximumScreenSpaceError (16) is tuned for smooth panning
-// over a whole city, not a tight top-down shot right over one block — at
-// that range it keeps a coarser LOD in place, which can read as "some
-// buildings not shown". A lower value requests finer tiles sooner, BUT this
-// app has no VITE_CESIUM_ION_TOKEN set (see .env.example), so every tile
-// request rides Cesium's shared, rate-limited demo token — dropping this
-// too low (previously 4) fires far more requests at that same limit and
-// makes MORE tiles fail/drop, the opposite of the intent. 8 is a middle
-// ground; get a free ion token and set VITE_CESIUM_ION_TOKEN to remove the
-// rate limit entirely and it's then safe to lower this further.
+// Neighboring OSM Buildings are flat white massing blocks in this app's
+// style (maskOsmBuildingsNearSite below strips their real texture/color) —
+// there's no fine surface detail to lose by keeping them coarser, so
+// there's little reason to request more detail than Cesium's own default
+// (16) just for context buildings the GVI analysis never looks closely at.
+// A lower value (this used to be 8, even 4 earlier) requests finer tiles
+// sooner, but this app has no VITE_CESIUM_ION_TOKEN set by default (see
+// .env.example), so every tile request rides Cesium's shared, rate-limited
+// demo token — a lower SSE fires more requests against that same limit,
+// which is what was actually slowing the initial load down. Set your own
+// free ion token via VITE_CESIUM_ION_TOKEN to remove the rate limit
+// entirely, at which point lowering this again for sharper context
+// buildings is safe.
 function tuneOsmBuildingsLod(tileset: Cesium.Cesium3DTileset): void {
-  tileset.maximumScreenSpaceError = 8;
+  tileset.maximumScreenSpaceError = 16;
   tileset.dynamicScreenSpaceError = true;
   tileset.skipLevelOfDetail = true;
   tileset.cacheBytes = 1024 * 1024 * 1024;
@@ -424,7 +427,7 @@ export function useCesium(): UseCesiumResult {
       DEFAULT_LOCATION.height + MODEL_BASE_OFFSET_M * INITIAL_BUILDING_SCALE + 100
     );
     const buildingBoundingSphere = new Cesium.BoundingSphere(buildingCenter, 140);
-    const DEFAULT_VIEW_RANGE_M = 400;
+    const DEFAULT_VIEW_RANGE_M = DEFAULT_VIEW.rangeM;
 
     function flyToDefaultView(durationSeconds: number): void {
       viewer.camera.flyToBoundingSphere(buildingBoundingSphere, {

@@ -1143,7 +1143,7 @@ export function BalconyViewpointNavigator({
       title="GVI Leaderboard"
       aria-label="GVI Leaderboard"
     >
-      🏆
+      📊
     </button>
 
     {showAutoNavModal && !isTouring && (
@@ -1199,7 +1199,7 @@ export function BalconyViewpointNavigator({
         <div className="gvi-leaderboard-modal" onClick={(event) => event.stopPropagation()}>
           <div className="gvi-leaderboard-modal__header">
             <span>
-              🏆 GVI Leaderboard{gviScanResults.length > 0 ? ` (${gviScanResults.length})` : ""}
+              📊 GVI Leaderboard{gviScanResults.length > 0 ? ` (${gviScanResults.length})` : ""}
             </span>
             <div className="gvi-leaderboard-modal__header-actions">
               <button

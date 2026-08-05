@@ -1,0 +1,189 @@
+.heat-toggle {
+  position: fixed;
+  top: 6px;
+  right: 159px;
+  z-index: 120;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(38, 38, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ff8a65;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heat-toggle__badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  background: #17130f;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.heat-toggle:hover {
+  background: rgba(58, 58, 58, 0.95);
+  border-color: rgba(255, 138, 101, 0.5);
+}
+
+.heat-toggle.active {
+  background: rgba(255, 138, 101, 0.18);
+  border-color: rgba(255, 138, 101, 0.6);
+  color: #eaeaea;
+}
+
+.heat-panel {
+  position: fixed;
+  top: 44px;
+  right: 159px;
+  z-index: 130;
+  width: min(300px, 92vw);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: rgba(20, 16, 15, 0.98);
+  border: 1px solid #35281f;
+  border-radius: 12px;
+  color: #eaeaea;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  animation: heat-panel-slide-in 180ms ease-out;
+}
+
+@keyframes heat-panel-slide-in {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.heat-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #35281f;
+  position: sticky;
+  top: 0;
+  background: rgba(20, 16, 15, 0.98);
+  border-radius: 12px 12px 0 0;
+  z-index: 1;
+}
+
+.heat-panel__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffab91;
+}
+
+.heat-panel__close {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #241c1a;
+  color: #eaeaea;
+  border: 1px solid #40332c;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.heat-panel__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.heat-hero {
+  background: linear-gradient(160deg, rgba(255, 138, 101, 0.16), rgba(28, 20, 18, 0.6));
+  border: 1px solid rgba(255, 138, 101, 0.3);
+  border-radius: 16px;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.heat-hero__temp {
+  font-size: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.heat-hero__sublabel {
+  font-size: 12px;
+  color: #9aa4ad;
+}
+
+.heat-hero__label {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.heat-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.heat-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #35281f;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.heat-stat__label {
+  font-size: 11px;
+  color: #9aa4ad;
+}
+
+.heat-stat__value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.heat-panel__footer {
+  font-size: 11px;
+  color: #6b746c;
+  text-align: center;
+  padding-top: 4px;
+}
+
+.heat-panel__loading,
+.heat-panel__error {
+  padding: 40px 20px;
+  text-align: center;
+  color: #9aa4ad;
+  font-size: 13px;
+}
+
+.heat-panel__retry {
+  margin-top: 10px;
+  background: #241c1a;
+  color: #eaeaea;
+  border: 1px solid #40332c;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 12px;
+}

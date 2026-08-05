@@ -4,6 +4,8 @@ import { CesiumViewer } from "./components/CesiumViewer";
 import { VegetationLayer } from "./components/VegetationLayer";
 import { VegetationLayer as CesiumVegetationLayer } from "./gis/VegetationLayer";
 import { TreeHoverPopup } from "./components/TreeHoverPopup";
+import { HeatComfortPanel } from "./features/heat-comfort/HeatComfortPanel";
+import { AirQualityPanel } from "./features/air-quality/AirQualityPanel";
 // Lazy-loaded: the balcony-debug feature folder is ~3400 lines (viewpoint
 // navigation, saved views, GVI ranking, automation harness) — splitting it
 // into its own chunk means the browser doesn't have to download/parse it
@@ -290,6 +292,8 @@ export default function App() {
         perTreeGviResult={canopyGviResult?.perTreeResult ?? null}
       />
       <TreeHoverPopup viewer={viewerRef.current} vegetationLayerRef={vegetationLayerRef} />
+      <HeatComfortPanel />
+      <AirQualityPanel />
       <GVIProjectionOverlay
         viewer={viewerRef.current}
         trees={

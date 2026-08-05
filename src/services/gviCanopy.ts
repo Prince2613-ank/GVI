@@ -3,6 +3,7 @@ import { isLineOfSightClear, YIELD_EVERY, yieldToMain } from "./visibility";
 import { DEFAULT_TREE_HEIGHT_M, isValidTreeHeight } from "./treeHeight";
 import { VegetationFeature, VegetationPoint } from "./vegetation";
 import { generateEllipsePolygon } from "./canopy";
+import { resolveImperfections } from "../gis/treeSpecies";
 
 // gviCanopy.ts is the authoritative GVI pipeline (see TREE_HEIGHT_AUDIT.md /
 // GVIPanel.tsx for how it supersedes the old pixel-classification score in
@@ -19,8 +20,17 @@ export interface TreeGVIResult {
   visibleFraction: number;
   /** This tree's canopy polygon area on screen, in px², before occlusion is applied. */
   totalAreaPx2: number;
-  /** totalAreaPx2 * visibleFraction — this tree's contribution to visibleCanopyAreaPx2. */
+  /** totalAreaPx2 * visibleFraction — this tree's RAW (health-unweighted) contribution. Kept honest/unweighted for debug overlays (GVIProjectionOverlay) that should show real projected geometry, not a score-adjusted area. */
   visibleAreaPx2: number;
+  /**
+   * 1.0 (fully healthy) down to 0.6 (most stressed) — same per-tree
+   * `resolveImperfections().stress` value already shown in the hover
+   * popup, now also feeding the score itself. 1.0 for non-tree vegetation
+   * (land-cover polygons, scrub) where a "health" concept doesn't apply.
+   */
+  healthFactor: number;
+  /** visibleAreaPx2 * healthFactor — this tree's actual contribution to visibleCanopyAreaPx2/gviScore ("Enhanced GVI": amount AND condition of visible greenery, not just amount). */
+  healthWeightedAreaPx2: number;
 }
 
 export interface CanopyGVIResult {
@@ -35,6 +45,20 @@ interface ScorableVegetation {
   id: string;
   positions: { latitude: number; longitude: number }[];
   heightM: number;
+  /** 1.0 unless this is a real tree with a resolved stress value — see TreeGVIResult.healthFactor. */
+  healthFactor: number;
+}
+
+// Stressed/dry-looking trees are still visibly green — this caps how much
+// their contribution can be discounted (down to 60% at maximum stress)
+// rather than letting a "Poor" health tree count for nothing, which would
+// overstate the effect a cosmetic desaturation tint has on someone's
+// actual perceived view.
+const MIN_HEALTH_FACTOR = 0.6;
+
+function healthFactorForTree(treeId: string): number {
+  const { stress } = resolveImperfections(treeId);
+  return 1 - stress * (1 - MIN_HEALTH_FACTOR);
 }
 
 // Occlusion is sampled, not computed per-pixel: the canopy polygon's
@@ -82,10 +106,12 @@ function toScorableVegetation(
 ): ScorableVegetation | null {
   if (feature.kind === "point") {
     if (feature.canopyPolygon && feature.canopyPolygon.length >= 3) {
+      const isTree = feature.category === "tree" || feature.category === "street_tree";
       return {
         id: feature.id,
         positions: feature.canopyPolygon,
         heightM: canopyTargetHeightM(feature, scene),
+        healthFactor: isTree ? healthFactorForTree(feature.id) : 1,
       };
     }
 
@@ -101,6 +127,7 @@ function toScorableVegetation(
         feature.crownRadius ?? 1.5,
         feature.crownRadius ?? 1.5
       ),
+      healthFactor: 1,
       heightM: (feature.groundHeight ?? terrainHeightM ?? 0) + landcoverHeightM(feature),
     };
   }
@@ -116,6 +143,7 @@ function toScorableVegetation(
     id: feature.id,
     positions: feature.positions,
     heightM: landcoverHeightM(feature),
+    healthFactor: 1,
   };
 }
 
@@ -255,13 +283,20 @@ export async function computeCanopyGVI(
     }
     const visibleFraction = clearCount / samplePositions.length;
     const visibleAreaPx2 = totalAreaTreePx2 * visibleFraction;
+    const healthWeightedAreaPx2 = visibleAreaPx2 * vegetation.healthFactor;
 
     perTreeResult.set(vegetation.id, {
       visibleFraction,
       totalAreaPx2: totalAreaTreePx2,
       visibleAreaPx2,
+      healthFactor: vegetation.healthFactor,
+      healthWeightedAreaPx2,
     });
-    visibleCanopyAreaPx2 += visibleAreaPx2;
+    // "Enhanced GVI": the score itself is built from the health-weighted
+    // area, not the raw visible area — a stand of visibly stressed/dry
+    // trees now counts for measurably less than the same area of healthy
+    // canopy, not just "green = green" regardless of condition.
+    visibleCanopyAreaPx2 += healthWeightedAreaPx2;
   }
 
   const gviScore = totalAreaPx2 > 0 ? Math.min(1, visibleCanopyAreaPx2 / totalAreaPx2) : 0;

@@ -1,0 +1,311 @@
+.wellness-toggle {
+  position: fixed;
+  top: 6px;
+  right: 159px;
+  z-index: 120;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(38, 38, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #66bb6a;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wellness-toggle:hover {
+  background: rgba(58, 58, 58, 0.95);
+  border-color: rgba(102, 187, 106, 0.5);
+}
+
+.wellness-toggle.active {
+  background: rgba(102, 187, 106, 0.18);
+  border-color: rgba(102, 187, 106, 0.6);
+  color: #eaeaea;
+}
+
+.wellness-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 130;
+  width: min(400px, 92vw);
+  height: 100vh;
+  overflow-y: auto;
+  background: rgba(15, 20, 16, 0.98);
+  border-left: 1px solid #2a352c;
+  color: #eaeaea;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  animation: wellness-panel-slide-in 220ms ease-out;
+}
+
+@keyframes wellness-panel-slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.wellness-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #2a352c;
+  position: sticky;
+  top: 0;
+  background: rgba(15, 20, 16, 0.98);
+  z-index: 1;
+}
+
+.wellness-panel__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #a5d6a7;
+}
+
+.wellness-panel__header-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.wellness-panel__close,
+.wellness-panel__refresh {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #1c241d;
+  color: #eaeaea;
+  border: 1px solid #354036;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.wellness-panel__refresh:hover:not(:disabled) {
+  background: #263029;
+  border-color: rgba(102, 187, 106, 0.5);
+  color: #66bb6a;
+}
+
+.wellness-panel__refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.wellness-panel__body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Hero card ── */
+.wellness-hero {
+  background: linear-gradient(160deg, rgba(46, 125, 50, 0.22), rgba(20, 28, 22, 0.6));
+  border: 1px solid rgba(102, 187, 106, 0.3);
+  border-radius: 16px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.wellness-hero__ring-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin-bottom: 8px;
+}
+
+.wellness-hero__ring-wrap svg {
+  transform: rotate(-90deg);
+}
+
+.wellness-hero__ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 10;
+}
+
+.wellness-hero__ring-fg {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wellness-hero__score {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.wellness-hero__score-num {
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.wellness-hero__score-max {
+  font-size: 11px;
+  color: #9aa4ad;
+}
+
+.wellness-hero__label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.wellness-hero__sublabel {
+  font-size: 12px;
+  color: #9aa4ad;
+}
+
+/* ── Metric cards ── */
+.wellness-metric {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #2a352c;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 150ms ease;
+}
+
+.wellness-metric:hover {
+  border-color: rgba(102, 187, 106, 0.4);
+}
+
+.wellness-metric__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.wellness-metric__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.wellness-metric__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.wellness-metric__name {
+  font-size: 12.5px;
+  color: #9aa4ad;
+}
+
+.wellness-metric__value {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.wellness-metric__badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.wellness-metric__chevron {
+  font-size: 11px;
+  color: #6b746c;
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.wellness-metric.expanded .wellness-metric__chevron {
+  transform: rotate(180deg);
+}
+
+.wellness-metric__detail {
+  padding: 0 14px 14px 42px;
+  font-size: 12.5px;
+  color: #cfd6dc;
+  line-height: 1.5;
+}
+
+/* ── Insights / recommendations ── */
+.wellness-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b746c;
+  margin: 4px 0 2px;
+}
+
+.wellness-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wellness-list li {
+  font-size: 13px;
+  color: #d5dbd6;
+  padding-left: 18px;
+  position: relative;
+  line-height: 1.4;
+}
+
+.wellness-list.insights li::before {
+  content: "🌿";
+  position: absolute;
+  left: 0;
+  font-size: 11px;
+}
+
+.wellness-list.recommendations li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #66bb6a;
+  font-weight: 700;
+}
+
+.wellness-panel__footer {
+  font-size: 11px;
+  color: #6b746c;
+  text-align: center;
+  padding-top: 4px;
+}
+
+.wellness-panel__loading,
+.wellness-panel__error {
+  padding: 40px 20px;
+  text-align: center;
+  color: #9aa4ad;
+  font-size: 13px;
+}
+
+.wellness-panel__retry {
+  margin-top: 10px;
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 12px;
+}

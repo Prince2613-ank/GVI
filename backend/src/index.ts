@@ -4,6 +4,8 @@ import cors from "cors";
 import balconyViewpointsRouter from "./routes/balconyViewpoints";
 import mediaRouter from "./routes/media";
 import vegetationHeightsRouter from "./routes/vegetationHeights";
+import wellnessRouter from "./routes/wellness";
+import vegetationHealthRouter from "./routes/vegetationHealth";
 import { pool } from "./db/client";
 import { errorHandler } from "./middleware/errorHandler";
 import { resumeUnfinishedOnBoot } from "./services/balconyGeneration/generationQueue";
@@ -33,6 +35,8 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/balcony-viewpoints", balconyViewpointsRouter);
 app.use("/api/media", mediaRouter);
 app.use("/api/vegetation-heights", vegetationHeightsRouter);
+app.use("/api/wellness", wellnessRouter);
+app.use("/api/vegetation-health", vegetationHealthRouter);
 
 app.use(errorHandler);
 

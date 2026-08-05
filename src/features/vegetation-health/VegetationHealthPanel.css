@@ -1,0 +1,258 @@
+.veghealth-toggle {
+  position: fixed;
+  top: 6px;
+  right: 159px;
+  z-index: 120;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: rgba(38, 38, 38, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #8bc34a;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.veghealth-toggle:hover {
+  background: rgba(58, 58, 58, 0.95);
+  border-color: rgba(139, 195, 74, 0.5);
+}
+
+.veghealth-toggle.active {
+  background: rgba(139, 195, 74, 0.18);
+  border-color: rgba(139, 195, 74, 0.6);
+  color: #eaeaea;
+}
+
+.veghealth-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 130;
+  width: min(400px, 92vw);
+  height: 100vh;
+  overflow-y: auto;
+  background: rgba(15, 20, 16, 0.98);
+  border-left: 1px solid #2a352c;
+  color: #eaeaea;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  animation: veghealth-panel-slide-in 220ms ease-out;
+}
+
+@keyframes veghealth-panel-slide-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.veghealth-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid #2a352c;
+  position: sticky;
+  top: 0;
+  background: rgba(15, 20, 16, 0.98);
+  z-index: 1;
+}
+
+.veghealth-panel__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #c5e1a5;
+}
+
+.veghealth-panel__close {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #1c241d;
+  color: #eaeaea;
+  border: 1px solid #354036;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.veghealth-panel__body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.veghealth-hero {
+  background: linear-gradient(160deg, rgba(139, 195, 74, 0.2), rgba(20, 28, 22, 0.6));
+  border: 1px solid rgba(139, 195, 74, 0.3);
+  border-radius: 16px;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.veghealth-hero__ring-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin-bottom: 8px;
+}
+
+.veghealth-hero__ring-wrap svg {
+  transform: rotate(-90deg);
+}
+
+.veghealth-hero__ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 10;
+}
+
+.veghealth-hero__ring-fg {
+  fill: none;
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.veghealth-hero__score {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.veghealth-hero__score-num {
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.veghealth-hero__score-max {
+  font-size: 11px;
+  color: #9aa4ad;
+}
+
+.veghealth-hero__label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.veghealth-hero__sublabel {
+  font-size: 12px;
+  color: #9aa4ad;
+}
+
+.veghealth-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b746c;
+  margin: 4px 0 2px;
+}
+
+.veghealth-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.veghealth-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.veghealth-bar-row__label {
+  width: 42px;
+  flex-shrink: 0;
+  color: #9aa4ad;
+}
+
+.veghealth-bar-row__track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.veghealth-bar-row__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 600ms ease;
+}
+
+.veghealth-bar-row__count {
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.veghealth-species-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.veghealth-species-list li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #d5dbd6;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.veghealth-species-list li span:last-child {
+  color: #8bc34a;
+  font-weight: 700;
+}
+
+.veghealth-panel__footer {
+  font-size: 11px;
+  color: #6b746c;
+  text-align: center;
+  padding-top: 4px;
+}
+
+.veghealth-panel__loading,
+.veghealth-panel__error {
+  padding: 40px 20px;
+  text-align: center;
+  color: #9aa4ad;
+  font-size: 13px;
+}
+
+.veghealth-panel__retry {
+  margin-top: 10px;
+  background: #263029;
+  color: #eaeaea;
+  border: 1px solid #46534b;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 12px;
+}

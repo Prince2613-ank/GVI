@@ -5,8 +5,10 @@ import { INITIAL_BUILDING } from "../../config/building";
 import { computeSunPosition, currentHourInNewYork, findSunriseSunset, julianDateAtHour } from "./sunPosition";
 import { computeWindowSunlight, lightQualityForElevation, windowHeadingDeg } from "./windowSunlight";
 import { applySunlightEffects, restoreViewer } from "./sunlightEffects";
+import { analyzeCanopyLightFilter, CanopyLightResult } from "./canopyLightAnalysis";
 import { fetchTodayWeather, irradianceFactor, TodayWeather, weatherLabel } from "./weather";
 import { fetchWellnessSnapshot, WellnessSnapshot } from "../wellness/wellnessApi";
+import { VegetationLayer } from "../../gis/VegetationLayer";
 import "./SunlightAnalysisPanel.css";
 
 const AQI_POLL_MS = 60000;
@@ -20,6 +22,8 @@ interface SunlightAnalysisPanelProps {
   viewer: Cesium.Viewer | null;
   /** The actual tileset rendering the surrounding white city-block masses — needed to tint them for day/night, since 3D Tiles don't pick up scene.light shading the way Entity polygons do. */
   osmBuildings: Cesium.Cesium3DTileset | null;
+  /** Needed to tint distant (billboard-tier) trees for day/night — see TreeRenderer.setNightTint for why only that tier needs it explicitly. */
+  vegetationLayer: VegetationLayer | null;
 }
 
 function formatHour(hour: number): string {
@@ -141,7 +145,7 @@ function AllFacadesRow({ readings, brightestSide }: { readings: FacadeReading[];
   );
 }
 
-export function SunlightAnalysisPanel({ viewer, osmBuildings }: SunlightAnalysisPanelProps) {
+export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }: SunlightAnalysisPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [hour, setHour] = useState(() => currentHourInNewYork());
   const [isPlaying, setIsPlaying] = useState(false);
@@ -151,6 +155,8 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings }: SunlightAnalysis
   // and reverts the lighting/shadows back to normal.
   const [isRunning, setIsRunning] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [canopyLightResult, setCanopyLightResult] = useState<CanopyLightResult | null>(null);
+  const [canopyLightState, setCanopyLightState] = useState<"idle" | "analyzing" | "done" | "error">("idle");
   const [weather, setWeather] = useState<TodayWeather | null>(null);
   const [weatherState, setWeatherState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [wellness, setWellness] = useState<WellnessSnapshot | null>(null);
@@ -300,11 +306,28 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings }: SunlightAnalysis
   function stop() {
     setIsPlaying(false);
     setIsRunning(false);
+    // A canopy-light reading only means something for the sun position it
+    // was captured under — once the session stops (and the real lighting
+    // reverts), that reading is stale.
+    setCanopyLightResult(null);
+    setCanopyLightState("idle");
   }
 
   function reset() {
     setIsPlaying(false);
     setHour(currentHourInNewYork()); // back to real "now," not a fixed demo hour
+  }
+
+  async function analyzeCanopyLight() {
+    if (!viewer) return;
+    setCanopyLightState("analyzing");
+    try {
+      const result = await analyzeCanopyLightFilter(viewer);
+      setCanopyLightResult(result);
+      setCanopyLightState("done");
+    } catch {
+      setCanopyLightState("error");
+    }
   }
 
   // Real, reversible cinematic rendering — applies actual Cesium
@@ -319,16 +342,22 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings }: SunlightAnalysis
   // capture).
   useEffect(() => {
     if (!viewer || !isRunning) return;
-    applySunlightEffects(viewer, sun, sun.directionEcef, weatherFactor, osmBuildings);
-    return () => restoreViewer(viewer, osmBuildings);
-  }, [viewer, isRunning, sun, weatherFactor, osmBuildings]);
+    applySunlightEffects(viewer, sun, sun.directionEcef, weatherFactor, osmBuildings, vegetationLayer);
+    return () => restoreViewer(viewer, osmBuildings, vegetationLayer);
+  }, [viewer, isRunning, sun, weatherFactor, osmBuildings, vegetationLayer]);
 
   return (
     <>
       <button
         type="button"
         className={`sun-toggle ${isOpen ? "active" : ""} ${isRunning ? "effect-on" : ""}`}
-        onClick={() => setIsOpen((v) => !v)}
+        onClick={() =>
+          setIsOpen((v) => {
+            const next = !v;
+            if (next && window.innerWidth <= 640) window.dispatchEvent(new Event("balcony-panel:close"));
+            return next;
+          })
+        }
         title={isRunning ? "Sunlight Analysis (running)" : "Sunlight Analysis"}
         aria-label="Sunlight Analysis"
       >
@@ -495,6 +524,53 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings }: SunlightAnalysis
                 <span>Peak Sunlight Time</span>
                 <span className="sun-info__value">{peakSample ? formatHour(peakSample.hour) : "—"}</span>
               </div>
+            </div>
+
+            <div>
+              <div className="sun-section-title">Canopy Light Filter (current view)</div>
+              {!isRunning && (
+                <div className="sun-canopy__hint">Start Analysis to enable — needs real sun/shadow rendering to read.</div>
+              )}
+              {isRunning && canopyLightState !== "done" && (
+                <button
+                  type="button"
+                  className="sun-canopy-btn"
+                  onClick={analyzeCanopyLight}
+                  disabled={canopyLightState === "analyzing"}
+                >
+                  {canopyLightState === "analyzing" ? "Reading current view…" : "🌳 Analyze Canopy Light Filter"}
+                </button>
+              )}
+              {canopyLightState === "error" && <div className="sun-canopy__hint">Couldn't read the view — try again.</div>}
+              {canopyLightState === "done" && canopyLightResult && (
+                <div className="sun-canopy-result">
+                  <div className="sun-canopy-bar">
+                    <div
+                      className="sun-canopy-bar__seg canopy"
+                      style={{ width: `${canopyLightResult.canopyFilteredPct}%` }}
+                      title={`Canopy-filtered: ${canopyLightResult.canopyFilteredPct}%`}
+                    />
+                    <div
+                      className="sun-canopy-bar__seg harsh"
+                      style={{ width: `${canopyLightResult.harshPct}%` }}
+                      title={`Harsh/hardscape: ${canopyLightResult.harshPct}%`}
+                    />
+                    <div
+                      className="sun-canopy-bar__seg shadow"
+                      style={{ width: `${canopyLightResult.shadowPct}%` }}
+                      title={`Shadow: ${canopyLightResult.shadowPct}%`}
+                    />
+                  </div>
+                  <div className="sun-canopy-legend">
+                    <span><i className="dot canopy" />Canopy-filtered {canopyLightResult.canopyFilteredPct}%</span>
+                    <span><i className="dot harsh" />Harsh/hardscape {canopyLightResult.harshPct}%</span>
+                    <span><i className="dot shadow" />Shadow {canopyLightResult.shadowPct}%</span>
+                  </div>
+                  <button type="button" className="sun-canopy-btn secondary" onClick={analyzeCanopyLight}>
+                    ↻ Re-analyze
+                  </button>
+                </div>
+              )}
             </div>
 
           </div>

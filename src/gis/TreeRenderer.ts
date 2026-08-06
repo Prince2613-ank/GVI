@@ -97,6 +97,14 @@ export class TreeRenderer {
   private readonly placedTreesById = new Map<string, PlacedTree>();
   private readonly instancesByTreeId = new Map<string, TreeInstanceRef[]>();
   private hoveredTreeId: string | null = null;
+  // Distant trees (LOD3) are unlit billboard sprites — unlike the nearer
+  // LOD0-2 tiers, which use PerInstanceColorAppearance's Phong shading and
+  // so already respond to scene.light automatically, billboards ignore
+  // scene lighting entirely. Tracked here so a day/night tint can be
+  // applied to them directly (see setNightTint), the same reason the OSM
+  // Buildings tileset needed direct tinting instead of relying on the
+  // scene light.
+  private readonly billboardCollections: Cesium.BillboardCollection[] = [];
   // Resolved ground elevations persist across render() calls, keyed by
   // tree id — terrain doesn't move, so a tree whose height was already
   // sampled once (this session) never needs to re-sample it. Without this,
@@ -127,6 +135,7 @@ export class TreeRenderer {
       this.placedTreesById.clear();
       this.instancesByTreeId.clear();
       this.hoveredTreeId = null;
+      this.billboardCollections.length = 0;
       return;
     }
 
@@ -149,6 +158,7 @@ export class TreeRenderer {
     this.placedTreesById.clear();
     this.instancesByTreeId.clear();
     this.hoveredTreeId = null;
+    this.billboardCollections.length = 0;
     for (const placed of placedTrees) {
       this.placedTreesById.set(placed.tree.id, placed);
     }
@@ -252,6 +262,12 @@ export class TreeRenderer {
           closed: true,
           flat: false,
         }),
+        // A Primitive's shadow mode defaults to DISABLED — without this,
+        // trees never cast (or receive) shadows regardless of the scene's
+        // shadow map being enabled, which is why real sun-driven tree
+        // shadows weren't appearing on the ground even with the cinematic
+        // effect on.
+        shadows: Cesium.ShadowMode.ENABLED,
       });
       this.primitives.add(trunksPrimitive);
       addedPrimitives.push(trunksPrimitive);
@@ -262,13 +278,20 @@ export class TreeRenderer {
       crownsPrimitive = new Cesium.Primitive({
         geometryInstances: crowns,
         appearance: new Cesium.PerInstanceColorAppearance({
-          translucent: true,
+          // Cesium cannot cast shadows from translucent geometry — full
+          // stop, not a tunable setting — so the canopy has to render
+          // opaque to cast a real tree-shaped shadow onto the ground. The
+          // per-instance color still carries its jittered species tone;
+          // this only changes the blend mode, so the visible trade is
+          // canopies read as solid spheres instead of softly see-through.
+          translucent: false,
           closed: true,
           // Same Phong shading as the trunk — rounded-looking canopy
           // shading (soft normals/highlight falloff) instead of flat
           // uniform-color lobes.
           flat: false,
         }),
+        shadows: Cesium.ShadowMode.ENABLED,
       });
       this.primitives.add(crownsPrimitive);
       addedPrimitives.push(crownsPrimitive);
@@ -298,7 +321,7 @@ export class TreeRenderer {
           tree.latitude,
           groundHeight + treeHeight * 0.5
         ),
-        image: getSpeciesBillboardImage(profile),
+        image: getSpeciesBillboardImage(profile, this.viewer),
         // Real-world canopy scale rather than a fixed pixel size, so a tall
         // tree's billboard doesn't read as the same size as a short one.
         width: Math.max(6, (tree.crownRadius ?? treeHeight * 0.22) * 2 * 6),
@@ -318,10 +341,29 @@ export class TreeRenderer {
       });
     }
     this.primitives.add(collection);
+    this.billboardCollections.push(collection);
   }
 
   setVisible(visible: boolean): void {
     this.primitives.show = visible;
+  }
+
+  /**
+   * Tints distant (billboard-tier) trees toward the given color — pass
+   * `null` to restore their real per-species image color. Unlike the
+   * nearer LOD0-2 trees (which shade via Phong lighting and respond to
+   * scene.light automatically), billboards are unlit sprites, so this is
+   * the only way to make far trees darken at night along with everything
+   * else. Cheap: only a handful of far-tree billboard collections exist at
+   * once, each with at most a few hundred instances.
+   */
+  setNightTint(color: Cesium.Color | null): void {
+    const tint = color ?? Cesium.Color.WHITE;
+    for (const collection of this.billboardCollections) {
+      for (let i = 0; i < collection.length; i++) {
+        collection.get(i).color = tint;
+      }
+    }
   }
 
   /** Hover support: resolves a screen position to a tree id via Cesium's standard scene.pick, using the ids buildCrownInstances/buildTrunkInstance already assign. */

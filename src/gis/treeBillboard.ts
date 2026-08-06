@@ -9,14 +9,30 @@ import { TreeSpeciesProfile } from "./treeSpecies";
 // jitteredCanopyColor) — at billboard viewing distance individual-tree
 // color variation isn't perceptible, and reusing exactly one image per
 // species keeps the atlas bounded regardless of tree count.
+//
+// The cache is keyed per-Cesium.Viewer (via a WeakMap), NOT shared globally.
+// Cesium's BillboardCollection/TextureAtlas ties an uploaded image to the
+// WebGL context that uploaded it; handing the exact same HTMLCanvasElement
+// object to a SECOND Viewer's (separate WebGL context) BillboardCollection
+// caused Cesium to reuse/copy GPU texture state across contexts, producing
+// real "framebufferTexture2D: object does not belong to this context" /
+// "no valid shader program" errors and corrupting that viewer's draw state
+// entirely (seen when running two mini-viewports alongside the main map).
+// A WeakMap per-viewer cache still gets the one-canvas-per-species reuse
+// benefit within each viewer, just not across viewers.
 
-const billboardCache = new Map<string, HTMLCanvasElement>();
+const billboardCachesByViewer = new WeakMap<object, Map<string, HTMLCanvasElement>>();
 
 function hslToCss([h, s, l]: [number, number, number]): string {
   return Cesium.Color.fromHsl(h, s, l).toCssColorString();
 }
 
-export function getSpeciesBillboardImage(profile: TreeSpeciesProfile): HTMLCanvasElement {
+export function getSpeciesBillboardImage(profile: TreeSpeciesProfile, contextKey: object): HTMLCanvasElement {
+  let billboardCache = billboardCachesByViewer.get(contextKey);
+  if (!billboardCache) {
+    billboardCache = new Map();
+    billboardCachesByViewer.set(contextKey, billboardCache);
+  }
   const cached = billboardCache.get(profile.name);
   if (cached) return cached;
 

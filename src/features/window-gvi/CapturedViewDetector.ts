@@ -1,5 +1,6 @@
 import * as Cesium from "cesium";
 import { captureCanvas, computeGVIFromDataUrl } from "../../services/gvi";
+import { suspendForCapture, resumeAfterCapture } from "../sunlight-analysis/sunlightEffects";
 import { EyePosition } from "./types";
 
 // Ray casting (ViewAnalyzer/RayCastingEngine) tells you what geometry a
@@ -62,11 +63,17 @@ export async function captureWindowView(
   });
 
   await waitForRender(viewer);
+  // See useCapturedView.ts's identical suspend/resume for why: real
+  // shadow-mapped lighting from the Sunlight Analysis cinematic effect
+  // darkens canopy pixels enough to fail the HSV vegetation classifier.
+  const wasSuspended = suspendForCapture(viewer);
+  if (wasSuspended) await waitForRender(viewer);
   const dataUrl = captureCanvas(viewer.scene.canvas as HTMLCanvasElement);
   const { gviScore } = await computeGVIFromDataUrl(dataUrl, {
     generateMask: false,
     classificationMode: "visual-hsv",
   });
+  if (wasSuspended) resumeAfterCapture(viewer);
 
   viewer.camera.setView({
     destination: savedView.destination,

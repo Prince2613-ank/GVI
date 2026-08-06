@@ -328,6 +328,21 @@
   margin-top: 2px;
 }
 
+/* ── Mobile: the panel normally trails its toggle button at a fixed
+   `right` offset (matching the desktop toolbar layout), but on a narrow
+   phone viewport that offset pushes a 320px-wide panel almost entirely
+   off-screen to the left, under the sidebar. Anchor to both edges instead
+   so it's always fully visible regardless of screen width. */
+@media (max-width: 640px) {
+  .sun-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    top: 48px;
+    max-height: calc(100vh - 56px);
+  }
+}
+
 .sun-info__value {
   color: #eaeaea;
   font-weight: 700;
@@ -408,5 +423,93 @@
 .sun-compass__sun {
   fill: #ffca28;
   filter: drop-shadow(0 0 4px rgba(255, 202, 40, 0.8));
+}
+
+/* ── Canopy light filter ── */
+.sun-canopy__hint {
+  font-size: 11px;
+  color: #8a8f93;
+  line-height: 1.4;
+}
+
+.sun-canopy-btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 8px;
+  background: rgba(102, 187, 106, 0.14);
+  border: 1px solid rgba(102, 187, 106, 0.4);
+  color: #81c784;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sun-canopy-btn:hover:not(:disabled) {
+  background: rgba(102, 187, 106, 0.24);
+}
+
+.sun-canopy-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sun-canopy-btn.secondary {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: #3a331f;
+  color: #b9c0c6;
+  margin-top: 8px;
+}
+
+.sun-canopy-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sun-canopy-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.sun-canopy-bar__seg.canopy {
+  background: #66bb6a;
+}
+
+.sun-canopy-bar__seg.harsh {
+  background: #ff9a3d;
+}
+
+.sun-canopy-bar__seg.shadow {
+  background: #3b5b8c;
+}
+
+.sun-canopy-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #b9c0c6;
+}
+
+.sun-canopy-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.sun-canopy-legend .dot.canopy {
+  background: #66bb6a;
+}
+
+.sun-canopy-legend .dot.harsh {
+  background: #ff9a3d;
+}
+
+.sun-canopy-legend .dot.shadow {
+  background: #3b5b8c;
 }
 

@@ -66,8 +66,24 @@ export function BalconyViewpointNavigator({
   // sidebar that otherwise covers a chunk of the scene before the user has
   // asked for it.
   const [isMinimized, setIsMinimized] = useState(true);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  // On phones the navbar icons (sun/auto-nav/leaderboard/home) sit at the
+  // very top of the screen — starting the panel at top:0 buries them under
+  // its header. Nudge it down just on mobile so the close button and the
+  // navbar stay reachable above it.
+  const [position, setPosition] = useState(() => ({ top: window.innerWidth <= 640 ? 48 : 0, left: 0 }));
   const [gallerySearch, setGallerySearch] = useState("");
+
+  // The sun-analysis toggle lives in a separate component and has no direct
+  // handle on this panel's state — it broadcasts this event (mobile only,
+  // see SunlightAnalysisPanel.tsx) instead of closing it inline like
+  // auto-nav/leaderboard do above.
+  useEffect(() => {
+    function handleCloseBalconyPanel() {
+      setIsMinimized(true);
+    }
+    window.addEventListener("balcony-panel:close", handleCloseBalconyPanel);
+    return () => window.removeEventListener("balcony-panel:close", handleCloseBalconyPanel);
+  }, []);
 
   // Cinematic "show the whole building" auto-tour: visits every saved/
   // derived balcony viewpoint in sequence with smooth flights, no mouse
@@ -799,7 +815,10 @@ export function BalconyViewpointNavigator({
         ☰
       </button>
     ) : (
-    <div className="balcony-viewpoint-nav" style={{ top: position.top, left: position.left }}>
+    <div
+      className="balcony-viewpoint-nav"
+      style={{ top: position.top, left: position.left, height: `calc(100vh - ${position.top}px)` }}
+    >
       <div className="balcony-viewpoint-nav__header" onMouseDown={onHeaderMouseDown}>
         <span>Balcony Viewpoints</span>
         <button
@@ -1126,7 +1145,14 @@ export function BalconyViewpointNavigator({
     <button
       type="button"
       className={`auto-nav-toggle ${isTouring ? "active" : ""}`}
-      onClick={isTouring ? handleStopTour : () => setShowAutoNavModal(true)}
+      onClick={
+        isTouring
+          ? handleStopTour
+          : () => {
+              if (window.innerWidth <= 640) setIsMinimized(true);
+              setShowAutoNavModal(true);
+            }
+      }
       disabled={!viewer && !isTouring}
       title={isTouring ? "Stop tour" : "Auto Navigation"}
       aria-label="Auto Navigation"
@@ -1137,7 +1163,10 @@ export function BalconyViewpointNavigator({
     <button
       type="button"
       className="gvi-leaderboard-toggle"
-      onClick={() => setShowLeaderboardModal(true)}
+      onClick={() => {
+        if (window.innerWidth <= 640) setIsMinimized(true);
+        setShowLeaderboardModal(true);
+      }}
       title="GVI Leaderboard"
       aria-label="GVI Leaderboard"
     >

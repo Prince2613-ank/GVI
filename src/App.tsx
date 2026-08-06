@@ -93,9 +93,11 @@ export default function App() {
   const radiusEntityRef = useRef<Cesium.Entity | null>(null);
   const windowHighlightRef = useRef<Cesium.Entity | null>(null);
   const vegetationLayerRef = useRef<CesiumVegetationLayer | null>(null);
+  const [isVegetationLayerReady, setIsVegetationLayerReady] = useState(false);
   const handleVegetationLayerReady = useCallback(
     (layer: CesiumVegetationLayer | null) => {
       vegetationLayerRef.current = layer;
+      setIsVegetationLayerReady(layer !== null);
     },
     []
   );
@@ -307,6 +309,7 @@ export default function App() {
       <SunlightAnalysisPanel
         viewer={viewerRef.current}
         osmBuildings={isOsmBuildingsReady ? osmBuildingsRef.current : null}
+        vegetationLayer={isVegetationLayerReady ? vegetationLayerRef.current : null}
       />
       <GVIProjectionOverlay
         viewer={viewerRef.current}

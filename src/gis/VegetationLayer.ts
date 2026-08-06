@@ -233,6 +233,11 @@ export class VegetationLayer {
     this.trees.setVisible(visible);
   }
 
+  /** Passthrough to TreeRenderer — see its own docs for why only the far billboard tier needs explicit tinting. */
+  setTreeNightTint(color: Cesium.Color | null): void {
+    this.trees.setNightTint(color);
+  }
+
   /** Hover support — thin passthrough to TreeRenderer; see its own docs. */
   pickTreeId(windowPosition: Cesium.Cartesian2): string | null {
     return this.trees.pickTreeId(windowPosition);

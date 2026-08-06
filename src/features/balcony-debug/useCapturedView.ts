@@ -3,6 +3,7 @@ import * as Cesium from "cesium";
 import { CaptureStatus, CapturedView } from "./CapturedViewTypes";
 import { ManualVegetationPolygon } from "../manual-vegetation/types/ManualVegetationTypes";
 import { projectManualVegetation } from "../manual-vegetation/projection/ProjectionService";
+import { suspendForCapture, resumeAfterCapture } from "../sunlight-analysis/sunlightEffects";
 
 const TOAST_DURATION_MS = 3000;
 
@@ -37,6 +38,15 @@ export function useCapturedView() {
 
       setCaptureStatus("capturing");
       setCaptureError(null);
+
+      // If the Sunlight Analysis cinematic effect is currently running, its
+      // real shadow-mapped lighting darkens canopy pixels enough to fail
+      // the HSV vegetation thresholds below — a GVI score computed from
+      // that frame reads far too low (shadowed canopy looks "not green").
+      // Suspend it for exactly this one capture frame and put it back
+      // immediately after, so GVI stays accurate regardless of whatever
+      // the sunlight panel is doing.
+      const wasSuspended = suspendForCapture(viewer);
 
       try {
         // Forces an immediate, synchronous render right before reading the
@@ -90,6 +100,8 @@ export function useCapturedView() {
         if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
         toastTimeoutRef.current = setTimeout(() => setCaptureError(null), TOAST_DURATION_MS);
         return null;
+      } finally {
+        if (wasSuspended) resumeAfterCapture(viewer);
       }
     },
     []

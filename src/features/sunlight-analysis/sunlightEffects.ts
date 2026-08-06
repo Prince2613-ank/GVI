@@ -18,6 +18,7 @@
 
 import * as Cesium from "cesium";
 import { SunPosition } from "./sunPosition";
+import { VegetationLayer } from "../../gis/VegetationLayer";
 
 interface ViewerSnapshot {
   shadows: boolean;
@@ -25,6 +26,7 @@ interface ViewerSnapshot {
   enableLighting: boolean;
   sunBloom: boolean;
   light: Cesium.Light;
+  globeShadows: Cesium.ShadowMode;
 }
 
 const snapshots = new WeakMap<Cesium.Viewer, ViewerSnapshot>();
@@ -109,17 +111,34 @@ function lerpChannel(a: number, b: number, t: number): number {
   return Math.round(a + (b - a) * t);
 }
 
+/** 0 at/below fadeStartDeg, 1 at/above fadeEndDeg, linear between — shared by every elevation-driven tint below. */
+function dayNightFraction(elevationDeg: number, fadeStartDeg: number, fadeEndDeg: number): number {
+  if (elevationDeg <= fadeStartDeg) return 0;
+  if (elevationDeg >= fadeEndDeg) return 1;
+  return (elevationDeg - fadeStartDeg) / (fadeEndDeg - fadeStartDeg);
+}
+
 function buildingStyleColorForElevation(elevationDeg: number): string {
   const night = NIGHT_BUILDING_COLOR.split(",").map(Number);
   const day = DAY_BUILDING_COLOR.split(",").map(Number);
-  const t =
-    elevationDeg <= BUILDING_FADE_START_DEG
-      ? 0
-      : elevationDeg >= BUILDING_FADE_END_DEG
-        ? 1
-        : (elevationDeg - BUILDING_FADE_START_DEG) / (BUILDING_FADE_END_DEG - BUILDING_FADE_START_DEG);
+  const t = dayNightFraction(elevationDeg, BUILDING_FADE_START_DEG, BUILDING_FADE_END_DEG);
   const [r, g, b] = night.map((n, i) => lerpChannel(n, day[i], t));
   return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Distant tree billboards are unlit sprites too (see TreeRenderer's own
+// comment on setNightTint) — tinted the same way as the buildings, but as a
+// multiplier on the tree's own real per-species image color rather than a
+// flat replacement color, so trees still read as green at night, just
+// darker/moonlit, instead of turning grey like a building facade would.
+const NIGHT_TREE_TINT = Cesium.Color.fromBytes(90, 105, 140);
+const DAY_TREE_TINT = Cesium.Color.WHITE; // no tint — real billboard color shows through
+const TREE_FADE_START_DEG = -6;
+const TREE_FADE_END_DEG = 12;
+
+function treeTintForElevation(elevationDeg: number): Cesium.Color {
+  const t = dayNightFraction(elevationDeg, TREE_FADE_START_DEG, TREE_FADE_END_DEG);
+  return Cesium.Color.lerp(NIGHT_TREE_TINT, DAY_TREE_TINT, t, new Cesium.Color());
 }
 
 function tintOsmBuildings(tileset: Cesium.Cesium3DTileset, elevationDeg: number): void {
@@ -248,7 +267,8 @@ export function applySunlightEffects(
   sun: SunPosition,
   sunDirectionEcef: Cesium.Cartesian3,
   weatherFactor: number = 1,
-  osmBuildings: Cesium.Cesium3DTileset | null = null
+  osmBuildings: Cesium.Cesium3DTileset | null = null,
+  vegetationLayer: VegetationLayer | null = null
 ): void {
   currentSunDirections.set(viewer, sunDirectionEcef);
   currentSunElevations.set(viewer, sun.elevationDeg);
@@ -261,6 +281,7 @@ export function applySunlightEffects(
       enableLighting: viewer.scene.globe.enableLighting,
       sunBloom: viewer.scene.sunBloom,
       light: viewer.scene.light,
+      globeShadows: viewer.scene.globe.shadows,
     });
   }
 
@@ -292,8 +313,14 @@ export function applySunlightEffects(
   viewer.scene.shadowMap.enabled = true;
   viewer.scene.shadowMap.softShadows = sun.elevationDeg < 40; // soft-edged golden-hour shadows, crisp at high noon
   viewer.scene.sunBloom = sun.elevationDeg > 0 && weatherFactor > 0.3; // no visible sun bloom through heavy cloud
+  // The globe defaults to NOT receiving shadows at all (Cesium's own docs:
+  // "By default the globe does not cast shadows" — and receiving is off by
+  // default too) — without this, tree trunks/the building could cast
+  // shadows all they want and the ground would never actually show them.
+  viewer.scene.globe.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
 
   if (osmBuildings) tintOsmBuildings(osmBuildings, sun.elevationDeg);
+  if (vegetationLayer) vegetationLayer.setTreeNightTint(treeTintForElevation(sun.elevationDeg));
 
   if (!godRaysStages.has(viewer)) {
     const stage = createGodRaysStage(
@@ -319,7 +346,67 @@ export function applySunlightEffects(
   viewer.scene.requestRender();
 }
 
-export function restoreViewer(viewer: Cesium.Viewer, osmBuildings: Cesium.Cesium3DTileset | null = null): void {
+/**
+ * Momentarily reverts the cinematic sun/shadow/lighting state to exactly
+ * what it was before this feature touched the viewer — for the GVI capture
+ * pipeline to call right before it screenshots a view. Real shadow-mapped
+ * Phong lighting darkens canopy pixels enough to fail the HSV vegetation
+ * thresholds (services/gvi.ts's classifier), which is why a GVI reading
+ * taken while the cinematic effect was running could come out far too low
+ * (shadowed canopy reads as "not vegetation"). Returns `false` if the
+ * effect isn't currently active on this viewer, in which case there's
+ * nothing to suspend/resume and the caller can skip both calls. Does NOT
+ * touch the OSM Buildings tileset style or tree billboard tint — those
+ * don't affect pixel-level vegetation classification the way the actual
+ * light/shadow does, and reverting them mid-effect would be extra
+ * complexity for no benefit to the fix.
+ */
+export function suspendForCapture(viewer: Cesium.Viewer): boolean {
+  const snapshot = snapshots.get(viewer);
+  if (!snapshot) return false;
+  viewer.shadows = snapshot.shadows;
+  viewer.scene.shadowMap.enabled = snapshot.shadowMapEnabled;
+  viewer.scene.globe.enableLighting = snapshot.enableLighting;
+  viewer.scene.sunBloom = snapshot.sunBloom;
+  viewer.scene.light = snapshot.light;
+  viewer.scene.globe.shadows = snapshot.globeShadows;
+  viewer.scene.requestRender();
+  return true;
+}
+
+/** Re-applies the cinematic lighting exactly as it was, using this module's own tracked last-known sun/weather state — pair with suspendForCapture. */
+export function resumeAfterCapture(viewer: Cesium.Viewer): void {
+  const elevationDeg = currentSunElevations.get(viewer);
+  const sunDirectionEcef = currentSunDirections.get(viewer);
+  const weatherFactor = currentWeatherFactors.get(viewer) ?? 1;
+  if (elevationDeg === undefined || !sunDirectionEcef) return;
+
+  const lightDirection = Cesium.Cartesian3.negate(sunDirectionEcef, new Cesium.Cartesian3());
+  Cesium.Cartesian3.normalize(lightDirection, lightDirection);
+  const color = sunColorForElevation(elevationDeg);
+  const baseIntensity = lightIntensityForElevation(elevationDeg);
+  const cloudDamping = elevationDeg > 0 ? Cesium.Math.lerp(0.55, 1.0, weatherFactor) : 1;
+  viewer.scene.light = new Cesium.DirectionalLight({
+    direction: lightDirection,
+    color,
+    intensity: baseIntensity * cloudDamping,
+  });
+
+  viewer.scene.globe.enableLighting = true;
+  viewer.shadows = true;
+  viewer.scene.shadowMap.enabled = true;
+  viewer.scene.shadowMap.softShadows = elevationDeg < 40;
+  viewer.scene.sunBloom = elevationDeg > 0 && weatherFactor > 0.3;
+  viewer.scene.globe.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
+
+  viewer.scene.requestRender();
+}
+
+export function restoreViewer(
+  viewer: Cesium.Viewer,
+  osmBuildings: Cesium.Cesium3DTileset | null = null,
+  vegetationLayer: VegetationLayer | null = null
+): void {
   currentSunDirections.delete(viewer);
   currentSunElevations.delete(viewer);
   currentWeatherFactors.delete(viewer);
@@ -330,6 +417,7 @@ export function restoreViewer(viewer: Cesium.Viewer, osmBuildings: Cesium.Cesium
     viewer.scene.globe.enableLighting = snapshot.enableLighting;
     viewer.scene.sunBloom = snapshot.sunBloom;
     viewer.scene.light = snapshot.light;
+    viewer.scene.globe.shadows = snapshot.globeShadows;
     snapshots.delete(viewer);
   }
 
@@ -345,6 +433,7 @@ export function restoreViewer(viewer: Cesium.Viewer, osmBuildings: Cesium.Cesium
   }
 
   if (osmBuildings) resetOsmBuildings(osmBuildings);
+  if (vegetationLayer) vegetationLayer.setTreeNightTint(null);
 
   viewer.scene.requestRender();
 }

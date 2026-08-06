@@ -12,7 +12,7 @@ import { WindowManager } from "./WindowManager";
 import { ResultStore, downloadTextFile } from "./ResultStore";
 import { RayVisualizer } from "./RayVisualization";
 import { analyzeWindow } from "./ViewAnalyzer";
-import { rollUpBuilding, rollUpFlats, rollUpRooms } from "./GVIEngine";
+import { rollUpBuilding } from "./GVIEngine";
 import { ClassifierContext } from "./VegetationClassifier";
 import {
   DEFAULT_RAY_CAST_CONFIG,
@@ -374,7 +374,3 @@ export function WindowGVIPanel({
     </fieldset>
   );
 }
-
-// Re-exported for WindowPopup / App-level rollup displays that only need
-// room/flat aggregation without the full building tree.
-export { rollUpRooms, rollUpFlats };

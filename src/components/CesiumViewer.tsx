@@ -54,7 +54,6 @@ export function CesiumViewer({
   const { containerRef, viewer, isReady, osmBuildingsRef, initError } = useCesium();
   const buildingEntityRef = useRef<Cesium.Entity | null>(null);
 
-  // Notify parent once the viewer is initialized.
   useEffect(() => {
     if (viewer && isReady) {
       onViewerReady(viewer);
@@ -74,7 +73,6 @@ export function CesiumViewer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initError]);
 
-  // Create the building entity once the viewer is ready.
   useEffect(() => {
     if (!viewer || !isReady || buildingEntityRef.current) return;
 

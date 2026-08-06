@@ -43,7 +43,6 @@ import { computeCameraHeightM } from "./utils/cameraUtils";
 import { INITIAL_BUILDING } from "./config/building";
 import "./styles.css";
 
-
 export default function App() {
   const [building] = useState<BuildingTransform>(INITIAL_BUILDING);
   const [floor] = useState(1);

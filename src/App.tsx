@@ -4,8 +4,7 @@ import { CesiumViewer } from "./components/CesiumViewer";
 import { VegetationLayer } from "./components/VegetationLayer";
 import { VegetationLayer as CesiumVegetationLayer } from "./gis/VegetationLayer";
 import { TreeHoverPopup } from "./components/TreeHoverPopup";
-import { HeatComfortPanel } from "./features/heat-comfort/HeatComfortPanel";
-import { AirQualityPanel } from "./features/air-quality/AirQualityPanel";
+import { SunlightAnalysisPanel } from "./features/sunlight-analysis/SunlightAnalysisPanel";
 // Lazy-loaded: the balcony-debug feature folder is ~3400 lines (viewpoint
 // navigation, saved views, GVI ranking, automation harness) — splitting it
 // into its own chunk means the browser doesn't have to download/parse it
@@ -109,6 +108,18 @@ export default function App() {
   const handleViewerReady = useCallback((viewer: Cesium.Viewer) => {
     viewerRef.current = viewer;
     setIsViewerReady(true);
+  }, []);
+
+  // The surrounding-city white building masses are actually rendered by
+  // this tileset (OSM Buildings 3D Tiles), not by any Entity layer — the
+  // Sunlight Analysis panel needs a direct handle to it to tint them for
+  // day/night, since 3D Tiles don't pick up scene.light shading the way
+  // Entity polygons do.
+  const osmBuildingsRef = useRef<Cesium.Cesium3DTileset | null>(null);
+  const [isOsmBuildingsReady, setIsOsmBuildingsReady] = useState(false);
+  const handleOsmBuildingsReady = useCallback((tileset: Cesium.Cesium3DTileset) => {
+    osmBuildingsRef.current = tileset;
+    setIsOsmBuildingsReady(true);
   }, []);
 
   const buildingEntityRef = useRef<Cesium.Entity | null>(null);
@@ -258,6 +269,7 @@ export default function App() {
         building={building}
         onViewerReady={handleViewerReady}
         onBuildingEntityReady={handleBuildingEntityReady}
+        onOsmBuildingsReady={handleOsmBuildingsReady}
         onInitError={handleViewerInitError}
       />
       <IndoorNavigationOverlay />
@@ -292,8 +304,10 @@ export default function App() {
         perTreeGviResult={canopyGviResult?.perTreeResult ?? null}
       />
       <TreeHoverPopup viewer={viewerRef.current} vegetationLayerRef={vegetationLayerRef} />
-      <HeatComfortPanel />
-      <AirQualityPanel />
+      <SunlightAnalysisPanel
+        viewer={viewerRef.current}
+        osmBuildings={isOsmBuildingsReady ? osmBuildingsRef.current : null}
+      />
       <GVIProjectionOverlay
         viewer={viewerRef.current}
         trees={

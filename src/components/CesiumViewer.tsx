@@ -38,6 +38,8 @@ interface CesiumViewerProps {
   building: BuildingTransform;
   onViewerReady: (viewer: Cesium.Viewer) => void;
   onBuildingEntityReady: (entity: Cesium.Entity) => void;
+  /** Fires once the surrounding-context 3D Tileset (OSM Buildings, or the LiDAR fallback path's tileset if any) is available — the actual thing rendering the white city-block masses, as opposed to any Entity layer. */
+  onOsmBuildingsReady?: (tileset: Cesium.Cesium3DTileset) => void;
   /** Fires if Cesium.Viewer construction itself fails (e.g. WebGL context creation failing at the browser/GPU level) — see useCesium's initError. */
   onInitError?: (message: string) => void;
 }
@@ -46,6 +48,7 @@ export function CesiumViewer({
   building,
   onViewerReady,
   onBuildingEntityReady,
+  onOsmBuildingsReady,
   onInitError,
 }: CesiumViewerProps) {
   const { containerRef, viewer, isReady, osmBuildingsRef, initError } = useCesium();
@@ -55,6 +58,13 @@ export function CesiumViewer({
   useEffect(() => {
     if (viewer && isReady) {
       onViewerReady(viewer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewer, isReady]);
+
+  useEffect(() => {
+    if (viewer && isReady && osmBuildingsRef.current) {
+      onOsmBuildingsReady?.(osmBuildingsRef.current);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewer, isReady]);

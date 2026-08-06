@@ -62,12 +62,10 @@ export function BalconyViewpointNavigator({
   vegetationErrorMessage,
   manualVegetationCollection,
 }: BalconyViewpointNavigatorProps) {
-  // Starts collapsed on narrow/mobile screens — the panel is a fixed
-  // full-height 230px sidebar, which eats most of a phone's viewport if
-  // left open by default the way it is on desktop.
-  const [isMinimized, setIsMinimized] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches
-  );
+  // Starts collapsed by default — the panel is a fixed full-height 230px
+  // sidebar that otherwise covers a chunk of the scene before the user has
+  // asked for it.
+  const [isMinimized, setIsMinimized] = useState(true);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [gallerySearch, setGallerySearch] = useState("");
 

@@ -19,6 +19,7 @@ const BalconyViewpointNavigator = lazy(() =>
 import { IndoorNavigationOverlay } from "./features/indoor-navigation/IndoorNavigationOverlay";
 import { BalconySide, BalconyViewpointCollection } from "./features/balcony-debug/BalconyTypes";
 import {
+  DEFAULT_COLLECTION as DEFAULT_BALCONY_COLLECTION,
   loadBalconyCollection,
   saveBalconyCollection,
 } from "./features/balcony-debug/BalconyStorage";
@@ -49,11 +50,23 @@ export default function App() {
   const [direction] = useState<CardinalDirection>("North");
   const [canopyGviResult] = useState<CanopyGVIResult | null>(null);
   const [balconyCollection, setBalconyCollection] = useState<BalconyViewpointCollection>(
-    loadBalconyCollection
+    DEFAULT_BALCONY_COLLECTION
   );
+  // IndexedDB reads are async, so the default renders first and the saved
+  // collection (if any) swaps in once loaded — same fallback behavior as
+  // before, just no longer able to block first paint.
+  useEffect(() => {
+    let cancelled = false;
+    loadBalconyCollection().then((loaded) => {
+      if (!cancelled) setBalconyCollection(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const persistBalconyCollection = useCallback((next: BalconyViewpointCollection) => {
     setBalconyCollection(next);
-    saveBalconyCollection(next);
+    void saveBalconyCollection(next);
   }, []);
   const [manualVegetationCollection] = useState<ManualVegetationCollection>(loadManualVegetationCollection);
   // Shared between the Balcony Viewpoints navigator and the Live Balcony

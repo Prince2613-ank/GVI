@@ -10,8 +10,26 @@ import {
   TreeImperfections,
   TreeSpeciesProfile,
 } from "./treeSpecies";
+import { resolveCrownDimensions } from "./crownDimensions";
 
 export type Tessellation = "fine" | "medium" | "coarse";
+
+const INCHES_TO_METERS = 0.0254;
+/** Trunks flare below breast height, where DBH is measured — the base is modestly wider. */
+const TRUNK_BASE_FLARE = 1.25;
+/**
+ * Guards against inventory rows carrying 0, a placeholder, or an implausible
+ * diameter (the widest street trees top out well under 2m across); anything
+ * outside this range falls back to the crown-proportional estimate.
+ */
+export function isMeasuredDbhInches(dbhInches: number | undefined): dbhInches is number {
+  return (
+    typeof dbhInches === "number" &&
+    Number.isFinite(dbhInches) &&
+    dbhInches >= 1 &&
+    dbhInches <= 80
+  );
+}
 
 interface CrownGeometryOptions {
   tree: VegetationPoint;
@@ -24,8 +42,17 @@ interface CrownGeometryOptions {
   distanceDisplayConditionM?: [number, number];
 }
 
+// `fine` previously passed {} — which does NOT mean "a sensible default",
+// it means Cesium's EllipsoidGeometry default of 64x64 partitions: roughly
+// 8,000 triangles per lobe, and crowns are built from up to 3 lobes, so a
+// single near tree cost ~25,000 triangles. That was also a ~21x jump in
+// triangle count across the LOD0/LOD1 boundary sitting right next to it at
+// 150m, which is far more detail than a rounded canopy can show at that
+// distance. 32x20 keeps the silhouette smooth while cutting LOD0 geometry
+// about 4x — and with it the worker tessellation time that "Analyse GVI"
+// waits on.
 const ELLIPSOID_TESSELLATION: Record<Tessellation, { slicePartitions?: number; stackPartitions?: number }> = {
-  fine: {},
+  fine: { slicePartitions: 32, stackPartitions: 20 },
   medium: { slicePartitions: 24, stackPartitions: 16 },
   coarse: { slicePartitions: 8, stackPartitions: 6 },
 };
@@ -70,15 +97,31 @@ function leanedPosition(
   );
 }
 
+/**
+ * `headingRad` rotates the ellipsoid about its own vertical axis, so a
+ * crown measured as elongated can be drawn pointing the way it actually
+ * points. Composed onto the east-north-up frame rather than replacing it,
+ * so the crown still sits level on the local horizon.
+ */
 function ellipsoidInstance(
   id: string,
   center: Cesium.Cartesian3,
   radii: Cesium.Cartesian3,
   color: Cesium.Color,
   tessellation: Tessellation,
-  distanceDisplayConditionM?: [number, number]
+  distanceDisplayConditionM?: [number, number],
+  headingRad = 0
 ): Cesium.GeometryInstance {
   const distanceDisplayCondition = distanceDisplayConditionAttribute(distanceDisplayConditionM);
+  const enu = Cesium.Transforms.eastNorthUpToFixedFrame(center);
+  const modelMatrix =
+    headingRad === 0
+      ? enu
+      : Cesium.Matrix4.multiplyByMatrix3(
+          enu,
+          Cesium.Matrix3.fromRotationZ(headingRad, new Cesium.Matrix3()),
+          new Cesium.Matrix4()
+        );
   return new Cesium.GeometryInstance({
     id,
     geometry: new Cesium.EllipsoidGeometry({
@@ -86,7 +129,7 @@ function ellipsoidInstance(
       vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
       ...ELLIPSOID_TESSELLATION[tessellation],
     }),
-    modelMatrix: Cesium.Transforms.eastNorthUpToFixedFrame(center),
+    modelMatrix,
     attributes: {
       color: Cesium.ColorGeometryInstanceAttribute.fromColor(color),
       ...(distanceDisplayCondition ? { distanceDisplayCondition } : {}),
@@ -132,9 +175,31 @@ function coneInstance(
 export function buildCrownInstances(options: CrownGeometryOptions): Cesium.GeometryInstance[] {
   const { tree, groundHeight, treeHeight, canopyRadius, tessellation, distanceDisplayConditionM } = options;
   const profile = resolveSpeciesProfile(tree.species, tree.label);
-  const imperfections = resolveImperfections(tree.id);
+  const imperfections = resolveImperfections(tree.id, tree.condition);
   const baseColor = applyHealthTint(jitteredCanopyColor(profile, tree.id), imperfections.stress);
-  const radius = Math.max(0.6, canopyRadius);
+
+  // The crown's REAL proportions and bearing where they were measured (see
+  // crownDimensions.ts); a circle of the resolved radius otherwise. `radius`
+  // is kept as the mean of the two axes so every shape's existing
+  // proportional arithmetic — which was written against one radius and is
+  // carefully tuned so each canopy top lands exactly on treeHeight — keeps
+  // working unchanged; the two axes are then applied as a scale around it.
+  const crown = resolveCrownDimensions(tree, canopyRadius);
+  const radius = Math.max(0.6, (crown.semiMajorM + crown.semiMinorM) / 2);
+  const majorScale = crown.semiMajorM / radius;
+  const minorScale = crown.semiMinorM / radius;
+  const crownHeading = crown.headingRad;
+  // A sparse crown is drawn slightly slimmer than its outline suggests, a
+  // dense one at full width — so "how solid is this tree" is visible rather
+  // than every canopy reading as equally packed. Bounded so even the
+  // thinnest measured crown keeps a believable body.
+  const densityScale = 0.82 + crown.fillRatio * 0.18;
+
+  /** Horizontal radii for a crown element, honouring measured elongation and density. */
+  const horizontal = (factor: number): { major: number; minor: number } => ({
+    major: radius * factor * majorScale * densityScale,
+    minor: radius * factor * minorScale * densityScale,
+  });
 
   // Per-lobe color variation (multiLayer/irregular only) is computed inline
   // at each lobe below — small extra lightness jitter on top of the tree's
@@ -158,7 +223,10 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
           `crown-${tree.id}`,
           at(0.62),
           Math.max(0.8, treeHeight * 0.76), // half-length fraction 0.38; 0.62 + 0.38 = 1.0
-          radius,
+          // A cone is a cylinder geometry with a single bottomRadius, so it
+          // can't take two axes; the mean measured radius is the honest
+          // single-number answer for a conifer's spread.
+          radius * densityScale,
           baseColor,
           tessellation,
           distanceDisplayConditionM
@@ -170,10 +238,11 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
         ellipsoidInstance(
           `crown-${tree.id}`,
           at(0.68),
-          new Cesium.Cartesian3(radius * 0.55, radius * 0.55, Math.max(0.6, treeHeight * 0.32)), // 0.68 + 0.32 = 1.0
+          new Cesium.Cartesian3(horizontal(0.55).major, horizontal(0.55).minor, Math.max(0.6, treeHeight * 0.32)), // 0.68 + 0.32 = 1.0
           baseColor,
           tessellation,
-          distanceDisplayConditionM
+          distanceDisplayConditionM,
+          crownHeading
         ),
       ];
 
@@ -182,10 +251,11 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
         ellipsoidInstance(
           `crown-${tree.id}`,
           at(0.9),
-          new Cesium.Cartesian3(radius * 1.15, radius * 1.15, Math.max(0.5, treeHeight * 0.1)), // 0.9 + 0.1 = 1.0
+          new Cesium.Cartesian3(horizontal(1.15).major, horizontal(1.15).minor, Math.max(0.5, treeHeight * 0.1)), // 0.9 + 0.1 = 1.0
           baseColor,
           tessellation,
-          distanceDisplayConditionM
+          distanceDisplayConditionM,
+          crownHeading
         ),
       ];
 
@@ -194,10 +264,11 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
         ellipsoidInstance(
           `crown-${tree.id}`,
           at(0.68),
-          new Cesium.Cartesian3(radius * 0.82, radius * 0.82, Math.max(0.6, treeHeight * 0.32)), // 0.68 + 0.32 = 1.0
+          new Cesium.Cartesian3(horizontal(0.82).major, horizontal(0.82).minor, Math.max(0.6, treeHeight * 0.32)), // 0.68 + 0.32 = 1.0
           baseColor,
           tessellation,
-          distanceDisplayConditionM
+          distanceDisplayConditionM,
+          crownHeading
         ),
       ];
 
@@ -223,13 +294,14 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
           `crown-${tree.id}-${index}`,
           at(heightFraction),
           new Cesium.Cartesian3(
-            radius * radiusFactor,
-            radius * radiusFactor,
+            horizontal(radiusFactor).major,
+            horizontal(radiusFactor).minor,
             Math.max(0.5, treeHeight * zFraction)
           ),
           layerColor,
           tessellation,
-          distanceDisplayConditionM
+          distanceDisplayConditionM,
+          crownHeading
         );
       });
     }
@@ -247,9 +319,17 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
       // un-jittered).
       const lobes = [0, 1, 2].map((lobeIndex) => {
         const angle = seededJitter(tree.id, 10 + lobeIndex, Math.PI) + (lobeIndex * (Math.PI * 2)) / 3;
-        const offsetRadius = radius * 0.35;
-        const eastOffset = Math.cos(angle) * offsetRadius;
-        const northOffset = Math.sin(angle) * offsetRadius;
+        // Lobes are spread around the crown's own measured ellipse, not a
+        // circle — otherwise an elongated crown would render as elongated
+        // lobes bunched into a round cluster, cancelling out the elongation
+        // the measurement established.
+        const offsetRadius = radius * 0.35 * densityScale;
+        const localEast = Math.cos(angle) * offsetRadius * majorScale;
+        const localNorth = Math.sin(angle) * offsetRadius * minorScale;
+        const cosHeading = Math.cos(crownHeading);
+        const sinHeading = Math.sin(crownHeading);
+        const eastOffset = localEast * cosHeading - localNorth * sinHeading;
+        const northOffset = localEast * sinHeading + localNorth * cosHeading;
         const heightFraction = 0.78 + seededJitter(tree.id, 20 + lobeIndex, 0.12);
         const lobeRadius = radius * (0.55 + seededJitter(tree.id, 30 + lobeIndex, 0.15));
         const origin = at(heightFraction);
@@ -270,10 +350,15 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
         return ellipsoidInstance(
           `crown-${tree.id}-${lobeIndex}`,
           center,
-          new Cesium.Cartesian3(lobeRadius, lobeRadius, Math.max(0.5, treeHeight * 0.22)),
+          new Cesium.Cartesian3(
+            lobeRadius * majorScale * densityScale,
+            lobeRadius * minorScale * densityScale,
+            Math.max(0.5, treeHeight * 0.22)
+          ),
           lobeColorValue,
           tessellation,
-          distanceDisplayConditionM
+          distanceDisplayConditionM,
+          crownHeading
         );
       });
       return lobes;
@@ -285,10 +370,11 @@ export function buildCrownInstances(options: CrownGeometryOptions): Cesium.Geome
         ellipsoidInstance(
           `crown-${tree.id}`,
           at(0.72),
-          new Cesium.Cartesian3(radius, radius, Math.max(0.6, treeHeight * 0.28)),
+          new Cesium.Cartesian3(horizontal(1).major, horizontal(1).minor, Math.max(0.6, treeHeight * 0.28)),
           baseColor,
           tessellation,
-          distanceDisplayConditionM
+          distanceDisplayConditionM,
+          crownHeading
         ),
       ];
   }
@@ -317,19 +403,38 @@ export function buildTrunkInstance(
   distanceDisplayConditionM?: [number, number]
 ): Cesium.GeometryInstance {
   const profile = resolveSpeciesProfile(tree.species, tree.label);
-  const imperfections = resolveImperfections(tree.id);
+  const imperfections = resolveImperfections(tree.id, tree.condition);
   const radius = Math.max(0.6, canopyRadius);
   const trunkLength = Math.max(1, treeHeight * trunkLengthFraction(profile));
   // Taper ratio and overall girth both get per-tree jitter (trunkTaperJitter,
   // maturity) so trunks of the same species aren't identical cylinders.
   const girth = 0.8 + imperfections.maturity * 0.4;
+
+  // Trunk width comes from the tree's REAL measured diameter at breast
+  // height where the inventory supplies one (NYC Forestry records DBH in
+  // inches for most of its trees), rather than being inferred from crown
+  // width. Those two genuinely diverge: a heavily pruned street tree can
+  // carry a thick trunk under a small crown, and a young open-grown tree
+  // the reverse. Falls back to the previous crown-proportional estimate
+  // when no DBH was recorded.
+  const dbhRadiusM = isMeasuredDbhInches(tree.dbhInches)
+    ? (tree.dbhInches * INCHES_TO_METERS) / 2
+    : null;
+  // DBH is measured at ~1.3m up, so the base flares somewhat wider than it.
+  const bottomRadius = dbhRadiusM !== null
+    ? Math.max(0.16, dbhRadiusM * TRUNK_BASE_FLARE)
+    : Math.max(0.16, radius * 0.11 * girth);
+  const topRadius = dbhRadiusM !== null
+    ? Math.max(0.06, dbhRadiusM * (0.55 + 0.2 * (2 - imperfections.trunkTaperJitter)))
+    : Math.max(0.06, radius * 0.045 * girth * (2 - imperfections.trunkTaperJitter));
+
   const distanceDisplayCondition = distanceDisplayConditionAttribute(distanceDisplayConditionM);
   return new Cesium.GeometryInstance({
     id: `trunk-${tree.id}`,
     geometry: new Cesium.CylinderGeometry({
       length: trunkLength,
-      topRadius: Math.max(0.06, radius * 0.045 * girth * (2 - imperfections.trunkTaperJitter)),
-      bottomRadius: Math.max(0.16, radius * 0.11 * girth),
+      topRadius,
+      bottomRadius,
       vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
       slices: CYLINDER_SLICES[tessellation],
     }),

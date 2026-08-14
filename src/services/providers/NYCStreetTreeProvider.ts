@@ -1,4 +1,4 @@
-import { VegetationFeature } from "../vegetation";
+import { TreeCondition, VegetationFeature } from "../vegetation";
 import {
   NYC_FORESTRY_TREE_API_URL,
   VEGETATION_COLORS,
@@ -33,6 +33,20 @@ function buildRequestUrl(query: VegetationQuery): string {
     $limit: "5000",
   });
   return `${NYC_FORESTRY_TREE_API_URL}?${params.toString()}`;
+}
+
+/**
+ * NYC Parks staff assess each tree in person and record Good/Fair/Poor.
+ * This is genuine observed data — previously fetched only to filter out
+ * dead trees and then discarded, so the renderer had nothing real to base
+ * canopy fullness or colour on and fell back to per-tree random jitter.
+ */
+function normalizeCondition(raw: string | undefined): TreeCondition | undefined {
+  const c = raw?.toLowerCase() ?? "";
+  if (c.includes("good") || c.includes("excellent")) return "Good";
+  if (c.includes("fair")) return "Fair";
+  if (c.includes("poor") || c.includes("critical") || c.includes("dying")) return "Poor";
+  return undefined;
 }
 
 function isLivingTree(row: ForestryTreeRow): boolean {
@@ -92,6 +106,7 @@ export class NYCStreetTreeProvider implements VegetationProvider {
           dbhInches !== undefined && Number.isFinite(dbhInches) && dbhInches > 0
             ? dbhInches
             : undefined,
+        condition: normalizeCondition(row.tpcondition),
       });
     }
     return features;

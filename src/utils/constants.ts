@@ -9,7 +9,18 @@ export const DEFAULT_LOCATION = {
   height: -20,
 };
 
-export const BUILDING_MODEL_URL = "/models/hdsfds.glb";
+// Texture-optimized build of the same model, produced by
+// scripts/compress_building_textures.mjs: 25.8 MB -> 1.7 MB, identical
+// geometry (92 meshes / 12,061 vertices / GPU instancing all preserved) —
+// the original was 99.3% textures, eight of them 2048x2048, for a building
+// that never occupies more than a few hundred pixels on screen. Beyond the
+// download, this is also ~167 MB less GPU memory, since the driver expands
+// textures to raw RGBA regardless of how well they compress on disk.
+//
+// hdsfds.glb (the original art) is kept as the source to regenerate from.
+// Switch back to it if a texture ever looks too soft, or re-run the script
+// with a larger --size.
+export const BUILDING_MODEL_URL = "/models/hdsfds.opt.glb";
 
 // The initial camera pose shown on page load: an oblique aerial view of the
 // whole building and its street-level surroundings from the northeast,

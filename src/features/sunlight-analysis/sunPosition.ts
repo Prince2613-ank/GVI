@@ -26,7 +26,15 @@ export interface SunPosition {
  */
 export function computeSunPosition(julianDate: Cesium.JulianDate, latitude: number, longitude: number): SunPosition {
   const sunPositionInertial = Cesium.Simon1994PlanetaryPositions.computeSunPositionInEarthInertialFrame(julianDate);
-  const icrfToFixed = Cesium.Transforms.computeIcrfToFixedMatrix(julianDate) ?? Cesium.Matrix3.IDENTITY;
+  // computeIcrfToFixedMatrix requires Earth-orientation data to be preloaded
+  // asynchronously (Transforms.preloadIcrfFixedTransform) or it silently
+  // returns undefined — which previously fell back to IDENTITY and made the
+  // sun's fixed-frame position never actually rotate with the Earth (nearly
+  // constant elevation all day, so it never crossed the horizon and
+  // sunrise/sunset came out null). computeTemeToPseudoFixedMatrix is a
+  // self-contained approximation that needs no preloaded data and always
+  // rotates with sidereal time.
+  const icrfToFixed = Cesium.Transforms.computeTemeToPseudoFixedMatrix(julianDate);
   const sunPositionFixed = Cesium.Matrix3.multiplyByVector(icrfToFixed, sunPositionInertial, new Cesium.Cartesian3());
 
   const observerPosition = Cesium.Cartesian3.fromDegrees(longitude, latitude, 0);

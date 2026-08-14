@@ -13,7 +13,7 @@ import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 import { instance, dedup, prune } from "@gltf-transform/functions";
 import { statSync } from "fs";
 
-const MODEL_PATH = new URL("../public/models/hdsfds.glb", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const MODEL_PATH = new URL("../model-source/hdsfds.glb", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
 const doc = await io.read(MODEL_PATH);

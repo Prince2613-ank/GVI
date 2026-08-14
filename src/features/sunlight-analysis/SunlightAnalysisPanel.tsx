@@ -6,6 +6,7 @@ import { computeSunPosition, currentHourInNewYork, findSunriseSunset, julianDate
 import { computeWindowSunlight, lightQualityForElevation, windowHeadingDeg } from "./windowSunlight";
 import { applySunlightEffects, restoreViewer } from "./sunlightEffects";
 import { analyzeCanopyLightFilter, CanopyLightResult } from "./canopyLightAnalysis";
+import { computeSkyViewFactor, skyOpennessLabel, SkyViewFactorResult } from "./skyViewFactor";
 import { fetchTodayWeather, irradianceFactor, TodayWeather, weatherLabel } from "./weather";
 import { fetchWellnessSnapshot, WellnessSnapshot } from "../wellness/wellnessApi";
 import { VegetationLayer } from "../../gis/VegetationLayer";
@@ -116,6 +117,40 @@ function SunPathCompass({
   );
 }
 
+/**
+ * Screen-aligned heatmap of the sampled grid, laid out in the same rows/
+ * cols (and therefore the same relative position) as the current rendered
+ * view — so a reader can directly compare it against what's on screen: a
+ * blue cell IS open sky right there in the frame, a dark cell is whatever
+ * blocked it (building, the window's own frame, canopy).
+ */
+function SkyViewGrid({ grid, cols, rows }: { grid: boolean[]; cols: number; rows: number }) {
+  const cellSize = 9;
+  const gap = 1.5;
+  const width = cols * (cellSize + gap);
+  const height = rows * (cellSize + gap);
+
+  return (
+    <svg width={width} height={height} className="sky-grid" viewBox={`0 0 ${width} ${height}`}>
+      {grid.map((isOpen, i) => {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        return (
+          <rect
+            key={i}
+            x={col * (cellSize + gap)}
+            y={row * (cellSize + gap)}
+            width={cellSize}
+            height={cellSize}
+            rx={1.5}
+            className={isOpen ? "sky-grid__cell sky-grid__cell--open" : "sky-grid__cell sky-grid__cell--blocked"}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
 interface FacadeReading {
   side: CardinalDirection;
   intensityPct: number;
@@ -157,6 +192,8 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [canopyLightResult, setCanopyLightResult] = useState<CanopyLightResult | null>(null);
   const [canopyLightState, setCanopyLightState] = useState<"idle" | "analyzing" | "done" | "error">("idle");
+  const [skyViewResult, setSkyViewResult] = useState<SkyViewFactorResult | null>(null);
+  const [skyViewState, setSkyViewState] = useState<"idle" | "analyzing" | "done" | "error">("idle");
   const [weather, setWeather] = useState<TodayWeather | null>(null);
   const [weatherState, setWeatherState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [wellness, setWellness] = useState<WellnessSnapshot | null>(null);
@@ -327,6 +364,23 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
       setCanopyLightState("done");
     } catch {
       setCanopyLightState("error");
+    }
+  }
+
+  // Pure hemisphere geometry — unlike Canopy Light Filter this needs no
+  // real sun/shadow rendering to mean something, so it's available whether
+  // or not Start Analysis has been run. Reads the eye position from wherever
+  // the user has actually navigated the camera to (the window/balcony they
+  // walked to), same as Canopy Light Filter does for its own reading.
+  async function analyzeSkyView() {
+    if (!viewer) return;
+    setSkyViewState("analyzing");
+    try {
+      const result = await computeSkyViewFactor(viewer);
+      setSkyViewResult(result);
+      setSkyViewState("done");
+    } catch {
+      setSkyViewState("error");
     }
   }
 
@@ -567,6 +621,43 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
                     <span><i className="dot shadow" />Shadow {canopyLightResult.shadowPct}%</span>
                   </div>
                   <button type="button" className="sun-canopy-btn secondary" onClick={analyzeCanopyLight}>
+                    ↻ Re-analyze
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="sun-section-title">Sky View Factor (current view)</div>
+              {skyViewState !== "done" && (
+                <button
+                  type="button"
+                  className="sky-view-btn"
+                  onClick={analyzeSkyView}
+                  disabled={skyViewState === "analyzing" || !viewer}
+                >
+                  {skyViewState === "analyzing" ? "Scanning the sky…" : "🌌 Analyze Sky View Factor"}
+                </button>
+              )}
+              {skyViewState === "error" && <div className="sun-canopy__hint">Couldn't read the view — try again.</div>}
+              {skyViewState === "done" && skyViewResult && (
+                <div className="sky-view-result">
+                  <div className="sky-view-grid-wrap">
+                    <SkyViewGrid grid={skyViewResult.grid} cols={skyViewResult.cols} rows={skyViewResult.rows} />
+                  </div>
+                  <div className="sun-info__row">
+                    <span>Open Sky</span>
+                    <span className="sun-info__value">{skyViewResult.svfPct}%</span>
+                  </div>
+                  <div className="sun-info__row">
+                    <span>Reads As</span>
+                    <span className="sun-info__value">{skyOpennessLabel(skyViewResult.svf)}</span>
+                  </div>
+                  <div className="sun-canopy__hint">
+                    Blue cells are open sky in the current view, laid out in the same position as what's on screen —
+                    dark cells are whatever blocks it: a building, the window's own frame, or tree canopy.
+                  </div>
+                  <button type="button" className="sun-canopy-btn secondary" onClick={analyzeSkyView}>
                     ↻ Re-analyze
                   </button>
                 </div>

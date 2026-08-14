@@ -21,15 +21,28 @@ const DRAFT_ID = "manual-veg-draft";
 /** Lifted slightly above the sampled terrain height so the fill doesn't z-fight with the ground/imagery. */
 const HEIGHT_OFFSET_M = 0.4;
 /**
- * Saved/draft polygons are extruded to this height instead of drawn as a
- * flat sliver — a paper-thin shape right at ground level was easy for
- * buildings/terrain to partially occlude depending on viewing angle,
- * reading as "not completely visible as drawn". A real 10m volume is both
- * what was asked for and the actual visibility fix: normal depth testing
- * still applies, but there's a solid extruded block to test against
- * instead of a near-zero-thickness plane.
+ * Saved/draft polygons are drawn FLAT, at ground level.
+ *
+ * They used to be extruded into a 10m-tall volume, on the reasoning that a
+ * paper-thin shape at ground level is easy for buildings/terrain to
+ * partially occlude at grazing viewing angles. The cost of that turned out
+ * to be worse than the problem: a hand-drawn polygon that overlaps a
+ * building footprint at all — which is common, since these are traced over
+ * imagery where canopy overhangs rooftops and yards — extruded its block
+ * straight THROUGH the building, painting green up the wall faces. That
+ * reads as vegetation growing on the building, and it also inflates GVI,
+ * since the classifier counts those wall pixels as greenery.
+ *
+ * Vertical green in the scene now comes only from the 3D tree geometry
+ * (TreeRenderer), which is the thing that actually has height. Manual
+ * polygons describe ground cover, so they render as ground cover; the
+ * HEIGHT_OFFSET_M lift above still keeps them off the imagery's z-plane.
+ *
+ * Implementation note: the extrusion is removed by omitting
+ * `extrudedHeight` entirely, not by passing 0 — PolygonGeometry with
+ * `extrudedHeight === height` still builds (degenerate, zero-height) wall
+ * geometry rather than the flat cap we actually want.
  */
-const POLYGON_HEIGHT_M = 10;
 
 function toCartesianArray(positions: LonLat[], heightM: number): Cesium.Cartesian3[] {
   return positions.map((p) => Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, heightM));
@@ -316,7 +329,6 @@ export class ManualVegetationOverlay {
                   toCartesianArray(polygon.positions, heightM)
                 ),
                 height: heightM,
-                extrudedHeight: heightM + POLYGON_HEIGHT_M,
                 vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
               }),
               attributes: {
@@ -452,7 +464,6 @@ export class ManualVegetationOverlay {
                 toCartesianArray(points, draftBaseHeightM)
               ),
               height: draftBaseHeightM,
-              extrudedHeight: draftBaseHeightM + POLYGON_HEIGHT_M,
               vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT,
             }),
             attributes: {

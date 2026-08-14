@@ -16,6 +16,7 @@ import { resolveBalconyFeature } from "./BalconyFloorGenerator";
 import { flyToBalcony } from "./BalconyFlyTo";
 import { useCapturedView } from "./useCapturedView";
 import { computeGVIFromDataUrl, GVIResult } from "../../services/gvi";
+import { SceneReadyStage, waitForSceneReady } from "../../services/sceneReady";
 import { fetchViewpoints, manualCapture, RemoteViewpoint } from "./balconyGenerationApi";
 import { ManualVegetationCollection } from "../manual-vegetation/types/ManualVegetationTypes";
 import { listManualVegetationPolygons } from "../manual-vegetation/storage/VegetationStorage";
@@ -272,8 +273,13 @@ export function BalconyViewpointNavigator({
   const [capturedImageResult, setCapturedImageResult] = useState<GVIResult | null>(null);
   const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false);
   const [gviPipelineStage, setGviPipelineStage] = useState<
-    "idle" | "vegetation" | "capturing" | "analyzing"
+    "idle" | "vegetation" | "settling" | "capturing" | "analyzing"
   >("idle");
+  // Which part of the scene the "settling" stage is currently waiting on —
+  // terrain, then the surrounding city tiles, then the building model, then
+  // its tree geometry. Surfaced so a long wait reads as visible progress
+  // rather than a frozen overlay.
+  const [sceneReadyStage, setSceneReadyStage] = useState<SceneReadyStage>("terrain");
   // Nearby vegetation is scoped to the building's location, not to whichever
   // balcony/floor is currently selected — once it's been analyzed here,
   // re-running it on every subsequent "Analyse GVI" click would just redo
@@ -301,6 +307,16 @@ export function BalconyViewpointNavigator({
         setHasAnalyzedVegetation(true);
       }
 
+      // Flying to a window puts the camera somewhere the scene has never
+      // drawn before: its terrain, building tiles and re-tiered tree
+      // geometry are all still streaming in. Capturing here — which is what
+      // used to happen — screenshots a half-built view, and every missing
+      // tree is silently counted as "not green". Wait for the scene to
+      // genuinely settle first; the overlay keeps running so the user sees
+      // why the extra moment is being taken.
+      setGviPipelineStage("settling");
+      if (viewer) await waitForSceneReady(viewer, undefined, setSceneReadyStage);
+
       setGviPipelineStage("capturing");
       const polygons = listManualVegetationPolygons(manualVegetationCollection);
       const captured = captureCurrentView(viewer, polygons);
@@ -321,11 +337,19 @@ export function BalconyViewpointNavigator({
   const gviPipelineLabel =
     gviPipelineStage === "vegetation"
       ? "Analyzing nearby vegetation…"
-      : gviPipelineStage === "capturing"
-        ? "Capturing view…"
-        : gviPipelineStage === "analyzing"
-          ? "Analyzing GVI…"
-          : "Analyse GVI";
+      : gviPipelineStage === "settling"
+        ? {
+            terrain: "Loading terrain…",
+            city: "Loading city…",
+            building: "Loading building…",
+            vegetation: "Loading trees…",
+            ready: "Loading the view…",
+          }[sceneReadyStage]
+        : gviPipelineStage === "capturing"
+          ? "Capturing view…"
+          : gviPipelineStage === "analyzing"
+            ? "Analyzing GVI…"
+            : "Analyse GVI";
 
   // Playful copy for the big centered overlay only — the small button label
   // above stays plain/functional, this is the "hey, something's happening"
@@ -333,11 +357,19 @@ export function BalconyViewpointNavigator({
   const gviOverlayLabel =
     gviPipelineStage === "vegetation"
       ? "🌱 Sniffing out nearby trees & greenery…"
-      : gviPipelineStage === "capturing"
-        ? "📸 Say cheese! Capturing your view…"
-        : gviPipelineStage === "analyzing"
-          ? "🧮 Counting every leaf in sight…"
-          : "";
+      : gviPipelineStage === "settling"
+        ? {
+            terrain: "🗺️ Loading the ground under the view…",
+            city: "🏙️ Building the surrounding city…",
+            building: "🏢 Raising the building…",
+            vegetation: "🌳 Letting every tree finish growing in…",
+            ready: "🌳 Letting every tree finish growing in…",
+          }[sceneReadyStage]
+        : gviPipelineStage === "capturing"
+          ? "📸 Say cheese! Capturing your view…"
+          : gviPipelineStage === "analyzing"
+            ? "🧮 Counting every leaf in sight…"
+            : "";
 
   const floorHeightDeltaM = FLOOR_HEIGHT_M * building.scale;
 
@@ -646,7 +678,13 @@ export function BalconyViewpointNavigator({
           destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, height),
           orientation: { heading: headingRad, pitch: Cesium.Math.toRadians(-5), roll: 0 },
         });
-        await wait(500);
+        // A fixed 500ms pause was a guess at how long the new view needs to
+        // finish streaming — too long on a cached view, and far too short on
+        // a fresh one, which produced under-reported scores at exactly the
+        // windows that had the most to load. waitForSceneReady returns as
+        // soon as the scene is genuinely settled, so this is both faster on
+        // average across a 100-window scan and correct on the slow stops.
+        await waitForSceneReady(viewer);
 
         const captured = captureCurrentView(viewer, polygons);
         if (captured) {
@@ -1070,6 +1108,10 @@ export function BalconyViewpointNavigator({
                     <div>
                       <span>Segmented Vegetation</span>
                       <span>{(capturedImageResult.segmentedVegetationPixelCount ?? 0).toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span>Trunks &amp; Branches</span>
+                      <span>{(capturedImageResult.trunkPixelCount ?? 0).toLocaleString()}</span>
                     </div>
                     <div>
                       <span>Manual Vegetation</span>

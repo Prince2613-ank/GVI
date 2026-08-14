@@ -41,6 +41,8 @@ export interface GVIResult {
   segmentedVegetationPixelCount?: number;
   /** Pixels added on top of segmentation by the manual vegetation mask. */
   manualVegetationPixelCount?: number;
+  /** Pixels contributed by tree trunks/branches, which the green-foliage test alone rejects. */
+  trunkPixelCount?: number;
 }
 
 /** Green geometry on an otherwise black semantic ID render. */
@@ -125,6 +127,7 @@ export async function computeGVIFromDataUrl(
       thresholdsUsed: segmentation.thresholds,
       segmentedVegetationPixelCount: segmentation.segmentedVegetationPixels,
       manualVegetationPixelCount: segmentation.manualVegetationPixels,
+      trunkPixelCount: segmentation.trunkPixels,
     };
   }
 

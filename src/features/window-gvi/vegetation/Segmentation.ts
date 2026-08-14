@@ -4,6 +4,7 @@ import {
   isVegetationPixel,
   VegetationThresholds,
 } from "./VegetationDetector";
+import { extractTrunks, isWoodyPixel } from "./WoodyDetector";
 import {
   BinaryMask,
   medianFilter3x3,
@@ -32,6 +33,8 @@ export interface SegmentationResult {
   segmentedVegetationPixels: number;
   /** Pixels added by the manual vegetation mask that segmentation alone didn't already classify as vegetation. */
   manualVegetationPixels: number;
+  /** Pixels contributed by trunks/branches that the green-foliage pass alone would have missed. */
+  trunkPixels: number;
 }
 
 const VEGETATION_COLOR: readonly [number, number, number] = [0, 255, 0];
@@ -72,6 +75,8 @@ export function segmentVegetation(
     viewshedMask?: ViewshedMask;
     minComponentSizePx?: number;
     manualVegetationMask?: ExternalVegetationMask;
+    /** Count trunks/branches as vegetation (default true) — see WoodyDetector. */
+    includeTrunks?: boolean;
   } = {}
 ): SegmentationResult {
   const {
@@ -79,6 +84,7 @@ export function segmentVegetation(
     viewshedMask,
     minComponentSizePx = 20,
     manualVegetationMask,
+    includeTrunks = true,
   } = options;
 
   const start = performance.now();
@@ -108,6 +114,34 @@ export function segmentVegetation(
   mask = morphologicalOpen(mask);
   mask = morphologicalClose(mask);
   mask = removeSmallComponents(mask, minComponentSizePx);
+
+  // Trunks and branches are vegetation too, but they're brown, so the
+  // foliage pass above rejects every one of them. They're added here, after
+  // the cleanup pass has established where the foliage actually is — see
+  // WoodyDetector, which only accepts woody regions attached to that
+  // foliage and shaped like a trunk, so brown roofs/roads/soil can't slip
+  // in on colour alone.
+  let trunkPixels = 0;
+  if (includeTrunks) {
+    const woodyCandidates = new Uint8Array(pixelCount);
+    for (let py = 0; py < height; py++) {
+      for (let px = 0; px < width; px++) {
+        const idx = py * width + px;
+        // Never reconsider a pixel foliage already claimed, and never look
+        // outside the viewshed.
+        if (!withinViewshed[idx] || mask.data[idx] === 1) continue;
+        const o = idx * 4;
+        woodyCandidates[idx] = isWoodyPixel(data[o], data[o + 1], data[o + 2]) ? 1 : 0;
+      }
+    }
+    const trunks = extractTrunks({ data: woodyCandidates, width, height }, mask);
+    for (let i = 0; i < pixelCount; i++) {
+      if (trunks.data[i] === 1 && mask.data[i] !== 1) {
+        mask.data[i] = 1;
+        trunkPixels++;
+      }
+    }
+  }
 
   let segmentedVegetationPixels = 0;
   for (let i = 0; i < pixelCount; i++) {
@@ -175,5 +209,6 @@ export function segmentVegetation(
     thresholds,
     segmentedVegetationPixels,
     manualVegetationPixels,
+    trunkPixels,
   };
 }

@@ -4,6 +4,8 @@
 // src/services/providers/*, not here — this file has no HTTP knowledge.
 
 export type VegetationSource = "overpass" | "nyc_forestry" | "nyc_lidar";
+/** Field-assessed tree condition, as recorded by a city forestry inventory. */
+export type TreeCondition = "Good" | "Fair" | "Poor";
 export type TreeHeightSource = "LiDAR" | "Measured" | "Estimated" | "Default";
 
 export interface TreeHeightReport {
@@ -72,6 +74,13 @@ export interface VegetationPoint extends VegetationFeatureBase {
   species?: string | null;
   /** Diameter at breast height from a field inventory, in inches. */
   dbhInches?: number;
+  /**
+   * Arborist-assessed condition from a field inventory (NYC Forestry's
+   * `tpcondition`). Real observed data, not inferred — drives how full and
+   * how healthy-coloured the rendered canopy is, so a declining tree isn't
+   * drawn as lush as a thriving one.
+   */
+  condition?: TreeCondition;
   heightSource?: TreeHeightSource;
   heightMethod?: string;
   heightEstimated?: boolean;

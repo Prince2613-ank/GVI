@@ -179,7 +179,10 @@ function tuneOsmBuildingsLod(tileset: Cesium.Cesium3DTileset): void {
   tileset.maximumScreenSpaceError = 16;
   tileset.dynamicScreenSpaceError = true;
   tileset.skipLevelOfDetail = true;
-  tileset.cacheBytes = 1024 * 1024 * 1024;
+  // 1 GB was aggressive enough to push an 8 GB laptop into memory pressure,
+  // which shows up as GC pauses rather than as a tile cache benefit. 512 MB
+  // still holds far more of this neighbourhood than a session revisits.
+  tileset.cacheBytes = 512 * 1024 * 1024;
   tileset.maximumCacheOverflowBytes = 1024 * 1024 * 1024;
 }
 

@@ -30,6 +30,15 @@ export class VegetationLayer {
   private readonly root = new Cesium.PrimitiveCollection();
   private readonly trees: TreeRenderer;
   private canopyPrimitive: Cesium.GroundPrimitive | null = null;
+  // Desired canopy-polygon visibility, remembered independently of whether
+  // the primitive currently exists. setCanopyVisible can only reach a
+  // primitive that has already been built, but setData replaces that
+  // primitive on every data change — and a newly-constructed
+  // GroundPrimitive defaults to show = true. Without keeping the intent
+  // here, a "hide" applied before the first setData (which is exactly what
+  // happens when the toggle's initial value is false) was silently
+  // discarded the moment the polygons were rebuilt.
+  private canopyVisible = true;
   private entityIds: string[] = [];
   // Debug-only layer for the "Tree Centers" toggle — off by default, and
   // distinct from the removed production far-LOD dots (see TreeRenderer.ts).
@@ -44,10 +53,25 @@ export class VegetationLayer {
   // calls setData with that same object on every render.
   private lastAppliedSummary: VegetationSummary | null = null;
 
+  /** Removes the camera.moveEnd listener that drives LOD re-tiering. */
+  private readonly detachLodRefresh: () => void;
+
   constructor(private readonly viewer: Cesium.Viewer) {
     viewer.scene.groundPrimitives.add(this.root);
     this.trees = new TreeRenderer(viewer);
     viewer.scene.primitives.add(this.treeCenters);
+
+    // Re-tier tree geometry once the camera settles somewhere new — see
+    // TreeRenderer.refreshLodForCamera for why a one-time bucketing at
+    // render() time isn't enough. moveEnd (not the per-frame changed event)
+    // means this runs once per navigation, not continuously during a
+    // flight, and refreshLodForCamera itself no-ops unless the camera
+    // actually travelled far enough to change any tree's tier.
+    const onMoveEnd = () => {
+      void this.trees.refreshLodForCamera();
+    };
+    viewer.camera.moveEnd.addEventListener(onMoveEnd);
+    this.detachLodRefresh = () => viewer.camera.moveEnd.removeEventListener(onMoveEnd);
   }
 
   /**
@@ -119,7 +143,11 @@ export class VegetationLayer {
         }),
       ];
     });
-    if (canopyInstances.length) {
+    // Tessellating a GroundPrimitive per tree is genuinely expensive, and
+    // setData is awaited by the GVI capture flow — so when the layer is
+    // hidden there is no reason to pay for geometry nobody will see.
+    // setCanopyVisible(true) rebuilds it if it is ever switched back on.
+    if (canopyInstances.length && this.canopyVisible) {
       this.canopyPrimitive = new Cesium.GroundPrimitive({
         geometryInstances: canopyInstances,
         appearance: new Cesium.PerInstanceColorAppearance({
@@ -127,6 +155,9 @@ export class VegetationLayer {
           flat: true,
         }),
         asynchronous: true,
+        // Carries the current toggle state onto the replacement primitive —
+        // see the canopyVisible field for why this can't be left to default.
+        show: this.canopyVisible,
       });
       this.root.add(this.canopyPrimitive);
     }
@@ -225,7 +256,22 @@ export class VegetationLayer {
 
   /** Debug toggle: shows/hides only the ground canopy polygons (Canopy Polygons). */
   setCanopyVisible(visible: boolean): void {
-    if (this.canopyPrimitive) this.canopyPrimitive.show = visible;
+    const wasVisible = this.canopyVisible;
+    this.canopyVisible = visible;
+    if (this.canopyPrimitive) {
+      this.canopyPrimitive.show = visible;
+      return;
+    }
+    // No primitive to show because setData skipped building it while
+    // hidden. Rebuild from the retained summary so switching the toggle
+    // back on still works rather than silently doing nothing — the
+    // idempotency guard has to be cleared first, or setData would treat
+    // this as the same data it already applied and return immediately.
+    if (visible && !wasVisible && this.lastAppliedSummary) {
+      const summary = this.lastAppliedSummary;
+      this.lastAppliedSummary = null;
+      void this.setData(summary);
+    }
   }
 
   /** Debug toggle: shows/hides only the procedural 3D tree geometry (3D Trees). */
@@ -295,7 +341,20 @@ export class VegetationLayer {
     this.entityIds.push(entity.id);
   }
 
+  /**
+   * Rebuilds tree geometry for the camera's current position and resolves
+   * once it is actually visible. The moveEnd listener in the constructor
+   * already does this automatically after ordinary navigation; callers use
+   * this when they must *await* the result — notably the GVI capture path,
+   * which cannot screenshot a scene whose trees are still tiered for a
+   * previous viewpoint.
+   */
+  async refreshTreeLod(): Promise<void> {
+    await this.trees.refreshLodForCamera();
+  }
+
   destroy(): void {
+    this.detachLodRefresh();
     this.entityIds.forEach((id) => this.viewer.entities.removeById(id));
     this.trees.destroy();
     if (!this.root.isDestroyed()) {

@@ -16,7 +16,9 @@ interface SceneWithRayPicking {
     width?: number
   ): PickFromRayResult | undefined;
 }
-function pickFromRay(scene: Cesium.Scene, ray: Cesium.Ray): PickFromRayResult | undefined {
+// Exported so skyViewFactor.ts's hemisphere ray sweep can reuse the exact
+// same picking call instead of re-deriving the runtime-only-API workaround.
+export function pickFromRay(scene: Cesium.Scene, ray: Cesium.Ray): PickFromRayResult | undefined {
   return (scene as unknown as SceneWithRayPicking).pickFromRay(ray, []);
 }
 

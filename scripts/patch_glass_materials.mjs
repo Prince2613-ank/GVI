@@ -1,6 +1,6 @@
 // One-off asset patch: the building GLB's real window glass — materials
 // "Solid_Glass" and "01_-_Default" (identified via `gltf-transform inspect
-// public/models/hdsfds.glb`, cross-referenced by instance count against the
+// model-source/hdsfds.glb`, cross-referenced by instance count against the
 // mesh names actually named "*Glass*") — was exported as a BLEND material
 // with a near-black baseColorFactor (~[0.03, 0.03, 0.07]) at ~50% alpha.
 // That's technically translucent, but tinting everything behind it almost
@@ -20,7 +20,7 @@
 import { NodeIO } from "@gltf-transform/core";
 import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
 
-const MODEL_PATH = new URL("../public/models/hdsfds.glb", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const MODEL_PATH = new URL("../model-source/hdsfds.glb", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 
 const GLASS_MATERIAL_NAMES = ["Solid_Glass", "01_-_Default"];
 const CLEAR_GLASS_COLOR = [0.86, 0.93, 0.97];

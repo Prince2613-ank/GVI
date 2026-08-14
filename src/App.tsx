@@ -65,7 +65,15 @@ export default function App() {
 
   const [debugToggles] = useState<CanopyDebugToggles>({
     treeCenters: false,
-    canopyPolygons: true,
+    // Off: this drew a flat green ground polygon under every tree — the
+    // canopy footprint. It reads as a green shadow/stain on the pavement
+    // rather than as vegetation, and because GVI is measured from rendered
+    // pixels, those footprints were being counted as greenery in the score
+    // on top of the 3D canopy already above them. The 3D tree geometry is
+    // what should represent a tree. The underlying data is untouched — only
+    // this decorative layer is hidden — and nothing reads it anymore
+    // (canopyGviResult below is permanently null).
+    canopyPolygons: false,
     trees3D: true,
     visibleCanopy: true,
     occludedCanopy: true,
@@ -100,6 +108,12 @@ export default function App() {
     },
     []
   );
+  // autoFetch stays OFF deliberately: trees are the expensive part of the
+  // scene (a 1000m fetch, terrain sampling per tree, then async geometry
+  // tessellation), and they're only actually needed once someone asks for a
+  // GVI number. Page load therefore paints the bare map — no trees, and no
+  // manual vegetation polygons either; both are drawn together by
+  // handleAnalyzeNearbyVegetation below, on the first "Analyse GVI" press.
   const { summary, state: vegetationState, errorMessage: vegetationError, refetch } = useVegetation(
     building.latitude,
     building.longitude,
@@ -235,7 +249,7 @@ export default function App() {
   // debug toggle panel that exposed them was removed) — the Balcony GVI
   // features already run their own on-demand analysis independently of
   // this button.
-  const handleAnalyzeNearbyVegetation = useCallback(async () => {
+  const handleAnalyzeNearbyVegetation = useCallback(async (): Promise<void> => {
     // Render the manual polygons FIRST so they're already on the globe
     // before the tree fetch adds hundreds of canopy ground-primitives —
     // otherwise the newly-loaded canopies can visually paint over the
@@ -245,6 +259,24 @@ export default function App() {
     // capture/preview/calculate against a scene where polygons are still
     // mid-render.
     await showManualVegetation(listManualVegetationPolygons(manualVegetationCollection));
+
+    // Vegetation now loads at startup, so by the time anyone presses
+    // "Analyse GVI" the trees are almost always already on the globe.
+    // Refetching anyway produced a brand-new summary object, and setData's
+    // identity check would then see "different data" and tear down every
+    // primitive to rebuild identical geometry — which is exactly the
+    // full-scene reload flash that appeared when navigating to a window.
+    // The existing summary is reused instead; a fetch only happens if
+    // startup genuinely produced nothing (offline, or a failed provider).
+    if (summary) {
+      await vegetationLayerRef.current?.setData(summary);
+      // Trees were tiered for wherever the camera was when they were built;
+      // this caller is about to screenshot from a new viewpoint, so make
+      // sure their geometry matches the current one first.
+      await vegetationLayerRef.current?.refreshTreeLod();
+      return;
+    }
+
     const nextSummary = await refetch();
     // Calling setData directly (rather than relying on the `summary` prop
     // reaching <VegetationLayer> through a React re-render) and awaiting it
@@ -257,7 +289,7 @@ export default function App() {
     if (nextSummary) {
       await vegetationLayerRef.current?.setData(nextSummary);
     }
-  }, [refetch, showManualVegetation, manualVegetationCollection]);
+  }, [refetch, summary, showManualVegetation, manualVegetationCollection]);
 
   // Camera no longer auto-flies to the floor/window pose on load — that
   // overwrote useCesium's DEFAULT_VIEW aerial shot immediately after it

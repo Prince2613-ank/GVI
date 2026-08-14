@@ -513,3 +513,49 @@
   background: #3b5b8c;
 }
 
+/* ── Sky view factor ── */
+.sky-view-btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 8px;
+  background: rgba(100, 181, 246, 0.14);
+  border: 1px solid rgba(100, 181, 246, 0.4);
+  color: #64b5f6;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sky-view-btn:hover:not(:disabled) {
+  background: rgba(100, 181, 246, 0.24);
+}
+
+.sky-view-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sky-view-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sky-view-grid-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid #3a331f;
+  border-radius: 8px;
+}
+
+.sky-grid__cell--open {
+  fill: #64b5f6;
+}
+
+.sky-grid__cell--blocked {
+  fill: rgba(255, 255, 255, 0.08);
+}
+

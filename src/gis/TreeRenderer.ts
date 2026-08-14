@@ -4,11 +4,21 @@ import {
   DEFAULT_TREE_HEIGHT_M,
   isValidTreeHeight,
 } from "../services/treeHeight";
-import { buildCrownInstances, buildTrunkInstance, Tessellation } from "./treeGeometry";
+import { buildCrownInstances, buildTrunkInstance, isMeasuredDbhInches, Tessellation } from "./treeGeometry";
+import { resolveCrownDimensions } from "./crownDimensions";
 import { getSpeciesBillboardImage } from "./treeBillboard";
 import { resolveImperfections, resolveSpeciesProfile } from "./treeSpecies";
 
-const MAX_DETAILED_TREES = 10_000;
+// Caps how many trees get real 3D crown+trunk geometry (LOD0/LOD1); the
+// rest fall through to the cheaper coarse/billboard tiers.
+//
+// This was 10,000, which could never actually bind: the vegetation fetch
+// radius is 1000m and the NYC provider caps at 5,000 rows, so in dense
+// Manhattan every tree within 300m got full geometry however many that
+// was. Because the bucketing loop below walks trees in distance order,
+// a real cap simply keeps the NEAREST ones detailed — which are the only
+// ones whose detail a viewer can resolve anyway.
+const MAX_DETAILED_TREES = 400;
 /** Safety cap so a render() await can never hang forever if a primitive's worker-side tessellation stalls. */
 const PRIMITIVE_READY_TIMEOUT_MS = 8000;
 
@@ -27,12 +37,27 @@ const LOD2_DISTANCE_M = 600; // crown-only, coarse, no trunk
 const LOD3_DISTANCE_M = 3000; // billboard impostor
 // Beyond LOD3_DISTANCE_M: nothing rendered (LOD4/hidden).
 
+// How far the camera must travel before refreshLodForCamera() rebuilds
+// geometry. Small enough that flying from the aerial view into a window
+// (hundreds of metres) always re-tiers, large enough that ordinary
+// orbiting/panning around one spot never triggers a rebuild.
+const LOD_REBUILD_MOVE_THRESHOLD_M = 100;
+
 export interface TreeHoverInfo {
   treeId: string;
   species: string;
   heightM: number;
+  /** Crown spread across its widest axis, metres. */
   canopyWidthM: number;
+  /** Crown spread across the perpendicular axis, metres. */
+  canopyBreadthM: number;
+  /** True when width/breadth came from a measured crown outline rather than a species estimate. */
+  crownMeasured: boolean;
+  /** Measured trunk diameter at breast height in cm, or null when the inventory recorded none. */
+  trunkDiameterCm: number | null;
   health: "Healthy" | "Stressed" | "Poor";
+  /** True when `health` reflects a real arborist assessment rather than a procedural stand-in. */
+  healthAssessed: boolean;
   age: "Young" | "Mature" | "Old";
   /** Rough estimate, not measured data — this app has no real carbon-uptake API. */
   estimatedCarbonKgPerYear: number;
@@ -113,6 +138,13 @@ export class TreeRenderer {
   // tree even when nothing had changed, which is what made trees visibly
   // clear and rebuild ("reload") each time.
   private readonly groundHeightCache = new Map<string, number>();
+  // The placements the current geometry was built from, retained so
+  // refreshLodForCamera() can re-tier without re-sampling terrain.
+  private lastPlacedTrees: PlacedTree[] = [];
+  // Camera position the current LOD bucketing was computed for.
+  private lastLodCameraPosition: Cesium.Cartesian3 | null = null;
+  // The in-progress LOD rebuild, if any — see refreshLodForCamera.
+  private lodRefreshInFlight: Promise<void> | null = null;
 
   constructor(private readonly viewer: Cesium.Viewer) {
     viewer.scene.primitives.add(this.primitives);
@@ -136,6 +168,8 @@ export class TreeRenderer {
       this.instancesByTreeId.clear();
       this.hoveredTreeId = null;
       this.billboardCollections.length = 0;
+      this.lastPlacedTrees = [];
+      this.lastLodCameraPosition = null;
       return;
     }
 
@@ -150,6 +184,52 @@ export class TreeRenderer {
       this.logDiagnostics(precisePlaced);
       await this.buildAllTiers(precisePlaced, generation);
     }
+  }
+
+  /**
+   * Re-buckets the already-placed trees into LOD tiers for the camera's
+   * CURRENT position, rebuilding their geometry.
+   *
+   * buildAllTiers assigns each tree a geometry tier once, using the camera
+   * position at that moment. The per-instance DistanceDisplayCondition then
+   * keeps that geometry correctly shown/hidden as the camera moves — but it
+   * cannot upgrade a tree that was built as a flat billboard into real 3D
+   * geometry. That mattered as soon as vegetation started loading on page
+   * load: from the opening aerial view almost every tree is 600m+ away, so
+   * the whole scene was built as LOD3 billboards, and flying down to a
+   * window left those trees looking absent (billboards are sized/faded for
+   * distant viewing and their DistanceDisplayCondition hides them entirely
+   * below LOD2_DISTANCE_M).
+   *
+   * No terrain re-sampling happens here — placements are reused verbatim,
+   * so this is purely the (worker-side, async) geometry rebuild.
+   */
+  async refreshLodForCamera(): Promise<void> {
+    if (this.lastPlacedTrees.length === 0) return;
+
+    const cameraPosition = this.viewer.camera.positionWC;
+    if (
+      this.lastLodCameraPosition &&
+      Cesium.Cartesian3.distance(this.lastLodCameraPosition, cameraPosition) < LOD_REBUILD_MOVE_THRESHOLD_M
+    ) {
+      return;
+    }
+
+    // buildAllTiers clears the whole primitive collection before repopulating
+    // it, so two overlapping runs can interleave into a half-built scene.
+    // Awaiting the in-flight rebuild (rather than returning immediately)
+    // matters for the GVI path, which calls this to be certain the trees are
+    // final before it screenshots them.
+    if (this.lodRefreshInFlight) {
+      await this.lodRefreshInFlight;
+      return;
+    }
+
+    const generation = ++this.renderGeneration;
+    this.lodRefreshInFlight = this.buildAllTiers(this.lastPlacedTrees, generation).finally(() => {
+      this.lodRefreshInFlight = null;
+    });
+    await this.lodRefreshInFlight;
   }
 
   /** Clears and rebuilds every LOD tier's primitives for the given placements; awaits tessellation readiness. */
@@ -170,16 +250,39 @@ export class TreeRenderer {
     const addedPrimitives: Cesium.Primitive[] = [];
 
     const camera = this.viewer.camera.positionWC;
+    // Recorded so refreshLodForCamera() can tell how far the camera has
+    // travelled since these tiers were assigned.
+    this.lastPlacedTrees = placedTrees;
+    this.lastLodCameraPosition = Cesium.Cartesian3.clone(camera, new Cesium.Cartesian3());
     const lod0: PlacedTree[] = [];
     const lod1: PlacedTree[] = [];
     const lod2: PlacedTree[] = [];
     const lod3: PlacedTree[] = [];
     let detailedCount = 0;
 
-    for (const placed of placedTrees) {
-      const { tree, groundHeight } = placed;
-      const base = Cesium.Cartesian3.fromDegrees(tree.longitude, tree.latitude, groundHeight);
-      const distance = Cesium.Cartesian3.distance(camera, base);
+    // Sorted nearest-first BEFORE bucketing. The tiers themselves are
+    // distance ranges, so order never used to matter — but MAX_DETAILED_TREES
+    // is a budget, and spending it in arbitrary provider order would hand
+    // full geometry to whichever trees happened to come back first. A tree
+    // 20m outside the window could then be demoted to a billboard while one
+    // at 290m kept its crown, which is both visibly wrong and wrong in the
+    // GVI score. Nearest-first spends the budget where detail is actually
+    // resolvable.
+    const byDistance = placedTrees
+      .map((placed) => ({
+        placed,
+        distance: Cesium.Cartesian3.distance(
+          camera,
+          Cesium.Cartesian3.fromDegrees(
+            placed.tree.longitude,
+            placed.tree.latitude,
+            placed.groundHeight
+          )
+        ),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+
+    for (const { placed, distance } of byDistance) {
       if (distance <= LOD0_DISTANCE_M && detailedCount < MAX_DETAILED_TREES) {
         lod0.push(placed);
         detailedCount++;
@@ -442,8 +545,12 @@ export class TreeRenderer {
     if (!placed) return null;
     const { tree, treeHeight } = placed;
     const profile = resolveSpeciesProfile(tree.species, tree.label);
-    const imperfections = resolveImperfections(tree.id);
-    const canopyWidthM = (tree.crownRadius ?? treeHeight * 0.22) * 2;
+    const imperfections = resolveImperfections(tree.id, tree.condition);
+    // Reported from the same measurement the geometry is built from, so the
+    // popup never disagrees with the tree the user is looking at.
+    const crown = resolveCrownDimensions(tree, tree.crownRadius ?? treeHeight * 0.22);
+    const canopyWidthM = crown.semiMajorM * 2;
+    const canopyBreadthM = crown.semiMinorM * 2;
     const health: TreeHoverInfo["health"] =
       imperfections.stress < 0.2 ? "Healthy" : imperfections.stress < 0.5 ? "Stressed" : "Poor";
     const age: TreeHoverInfo["age"] =
@@ -453,9 +560,21 @@ export class TreeRenderer {
       species: tree.species ?? tree.label ?? profile.name,
       heightM: Math.round(treeHeight * 10) / 10,
       canopyWidthM: Math.round(canopyWidthM * 10) / 10,
+      canopyBreadthM: Math.round(canopyBreadthM * 10) / 10,
+      crownMeasured: crown.measured,
+      trunkDiameterCm: isMeasuredDbhInches(tree.dbhInches)
+        ? Math.round(tree.dbhInches * 2.54 * 10) / 10
+        : null,
       health,
+      healthAssessed: tree.condition !== undefined,
       age,
-      estimatedCarbonKgPerYear: estimateCarbonKgPerYear(treeHeight, canopyWidthM),
+      // Uses the mean of the two crown axes, matching the volume proxy this
+      // estimate is built on — taking the long axis alone would overstate a
+      // markedly elongated crown.
+      estimatedCarbonKgPerYear: estimateCarbonKgPerYear(
+        treeHeight,
+        (canopyWidthM + canopyBreadthM) / 2
+      ),
       source: tree.source,
     };
   }

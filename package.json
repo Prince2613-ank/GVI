@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "build:model": "node scripts/compress_building_textures.mjs"
   },
   "dependencies": {
     "cesium": "^1.120.0",
@@ -23,6 +24,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "playwright": "^1.62.1",
+    "sharp": "^0.35.3",
     "typescript": "^5.5.4",
     "vite": "^5.4.1",
     "vite-plugin-cesium": "^1.2.23"

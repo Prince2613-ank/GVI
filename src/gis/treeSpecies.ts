@@ -1,4 +1,5 @@
 import * as Cesium from "cesium";
+import { TreeCondition } from "../services/vegetation";
 
 // Procedural species variety for TreeRenderer, built entirely from Cesium's
 // existing geometry primitives (ellipsoids/cylinders) — no bark/leaf texture
@@ -182,15 +183,37 @@ export interface TreeImperfections {
   stress: number;
 }
 
-export function resolveImperfections(treeId: string): TreeImperfections {
+/**
+ * Stress implied by a real, in-person arborist assessment. A small
+ * per-tree jitter is kept on top so a whole street of "Fair" trees still
+ * varies visibly rather than rendering as one flat colour.
+ */
+function stressFromCondition(condition: TreeCondition, treeId: string): number {
+  const base = { Good: 0.05, Fair: 0.35, Poor: 0.7 }[condition];
+  return Math.min(1, Math.max(0, base + (seededFraction(treeId, 44) - 0.5) * 0.16));
+}
+
+/**
+ * `condition` is the tree's field-assessed rating where the inventory
+ * supplies one. Passing it is what makes canopy colour reflect real
+ * observed health; without it the stress value is a deterministic
+ * pseudo-random stand-in, which looks varied but means nothing.
+ */
+export function resolveImperfections(
+  treeId: string,
+  condition?: TreeCondition
+): TreeImperfections {
   return {
     leanAngleRad: seededFraction(treeId, 40) * Cesium.Math.toRadians(6),
     leanHeadingRad: seededFraction(treeId, 41) * Math.PI * 2,
     trunkTaperJitter: 0.85 + seededFraction(treeId, 42) * 0.3,
     maturity: seededFraction(treeId, 43),
-    // Skewed toward 0 (healthy) — most street trees are fine; only a
-    // minority read as visibly stressed/dry.
-    stress: Math.max(0, seededFraction(treeId, 44) * 1.6 - 0.6),
+    stress: condition
+      ? stressFromCondition(condition, treeId)
+      : // No assessment for this tree — skewed toward 0 (healthy), since
+        // most street trees are fine and claiming otherwise would be worse
+        // than admitting we don't know.
+        Math.max(0, seededFraction(treeId, 44) * 1.6 - 0.6),
   };
 }
 

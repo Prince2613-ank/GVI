@@ -11,6 +11,7 @@
     "migrate:down": "node -r dotenv/config ./node_modules/node-pg-migrate/bin/node-pg-migrate down -m src/db/migrations --migration-file-language js --migrations-table gv_pgmigrations"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.18.0",

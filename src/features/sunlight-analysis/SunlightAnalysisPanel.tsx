@@ -1,12 +1,10 @@
 import * as Cesium from "cesium";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CardinalDirection, CARDINAL_DIRECTIONS, DEFAULT_LOCATION } from "../../utils/constants";
 import { INITIAL_BUILDING } from "../../config/building";
 import { computeSunPosition, currentHourInNewYork, findSunriseSunset, julianDateAtHour } from "./sunPosition";
 import { computeWindowSunlight, lightQualityForElevation, windowHeadingDeg } from "./windowSunlight";
 import { applySunlightEffects, restoreViewer } from "./sunlightEffects";
-import { analyzeCanopyLightFilter, CanopyLightResult } from "./canopyLightAnalysis";
-import { computeSkyViewFactor, skyOpennessLabel, SkyViewFactorResult } from "./skyViewFactor";
 import { fetchTodayWeather, irradianceFactor, TodayWeather, weatherLabel } from "./weather";
 import { fetchWellnessSnapshot, WellnessSnapshot } from "../wellness/wellnessApi";
 import { VegetationLayer } from "../../gis/VegetationLayer";
@@ -79,14 +77,26 @@ function useDayCurve(side: CardinalDirection, weather: TodayWeather | null): Day
   }, [side, weather]);
 }
 
+/** Clockwise-from-top angle (degrees, 0-360) of a point relative to an SVG element's own center. */
+function angleFromCenter(svg: SVGSVGElement, clientX: number, clientY: number): number {
+  const rect = svg.getBoundingClientRect();
+  const dx = clientX - (rect.left + rect.width / 2);
+  const dy = clientY - (rect.top + rect.height / 2);
+  const deg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+  return (deg + 360) % 360;
+}
+
 function SunPathCompass({
   azimuthDeg,
   elevationDeg,
   timeLabel,
+  onScrub,
 }: {
   azimuthDeg: number;
   elevationDeg: number;
   timeLabel: string;
+  /** Dragging the dial reports a scrubbed hour (0-24, clockwise from N=midnight) — an intuitive manual alternative to Start/Pause for jumping straight to a time of day. */
+  onScrub: (hour: number) => void;
 }) {
   const size = 180;
   const center = size / 2;
@@ -102,8 +112,46 @@ function SunPathCompass({
   const sunY = center + r * Math.sin(angleRad);
   const visible = elevationDeg > 0;
 
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  function scrubToPointer(clientX: number, clientY: number) {
+    if (!svgRef.current) return;
+    const clockDeg = angleFromCenter(svgRef.current, clientX, clientY);
+    onScrub((clockDeg / 360) * 24);
+  }
+
+  function handlePointerDown(e: React.PointerEvent<SVGSVGElement>) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+    scrubToPointer(e.clientX, e.clientY);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
+    if (!dragging) return;
+    scrubToPointer(e.clientX, e.clientY);
+  }
+
+  function handlePointerUp(e: React.PointerEvent<SVGSVGElement>) {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setDragging(false);
+  }
+
   return (
-    <svg width={size} height={size} className="sun-compass">
+    <svg
+      ref={svgRef}
+      width={size}
+      height={size}
+      className={`sun-compass ${dragging ? "sun-compass--dragging" : ""}`}
+      role="slider"
+      aria-label="Scrub time of day"
+      aria-valuemin={0}
+      aria-valuemax={24}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
       <circle cx={center} cy={center} r={maxR} className="sun-compass__ring" />
       <circle cx={center} cy={center} r={maxR * 0.66} className="sun-compass__ring sun-compass__ring--inner" />
       <circle cx={center} cy={center} r={maxR * 0.33} className="sun-compass__ring sun-compass__ring--inner" />
@@ -113,40 +161,6 @@ function SunPathCompass({
       <text x={10} y={center + 4} className="sun-compass__label">W</text>
       <text x={center} y={center + 5} className="sun-compass__time">{timeLabel}</text>
       {visible && <circle cx={sunX} cy={sunY} r={8} className="sun-compass__sun" />}
-    </svg>
-  );
-}
-
-/**
- * Screen-aligned heatmap of the sampled grid, laid out in the same rows/
- * cols (and therefore the same relative position) as the current rendered
- * view — so a reader can directly compare it against what's on screen: a
- * blue cell IS open sky right there in the frame, a dark cell is whatever
- * blocked it (building, the window's own frame, canopy).
- */
-function SkyViewGrid({ grid, cols, rows }: { grid: boolean[]; cols: number; rows: number }) {
-  const cellSize = 9;
-  const gap = 1.5;
-  const width = cols * (cellSize + gap);
-  const height = rows * (cellSize + gap);
-
-  return (
-    <svg width={width} height={height} className="sky-grid" viewBox={`0 0 ${width} ${height}`}>
-      {grid.map((isOpen, i) => {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        return (
-          <rect
-            key={i}
-            x={col * (cellSize + gap)}
-            y={row * (cellSize + gap)}
-            width={cellSize}
-            height={cellSize}
-            rx={1.5}
-            className={isOpen ? "sky-grid__cell sky-grid__cell--open" : "sky-grid__cell sky-grid__cell--blocked"}
-          />
-        );
-      })}
     </svg>
   );
 }
@@ -190,10 +204,6 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
   // and reverts the lighting/shadows back to normal.
   const [isRunning, setIsRunning] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
-  const [canopyLightResult, setCanopyLightResult] = useState<CanopyLightResult | null>(null);
-  const [canopyLightState, setCanopyLightState] = useState<"idle" | "analyzing" | "done" | "error">("idle");
-  const [skyViewResult, setSkyViewResult] = useState<SkyViewFactorResult | null>(null);
-  const [skyViewState, setSkyViewState] = useState<"idle" | "analyzing" | "done" | "error">("idle");
   const [weather, setWeather] = useState<TodayWeather | null>(null);
   const [weatherState, setWeatherState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [wellness, setWellness] = useState<WellnessSnapshot | null>(null);
@@ -343,45 +353,11 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
   function stop() {
     setIsPlaying(false);
     setIsRunning(false);
-    // A canopy-light reading only means something for the sun position it
-    // was captured under — once the session stops (and the real lighting
-    // reverts), that reading is stale.
-    setCanopyLightResult(null);
-    setCanopyLightState("idle");
   }
 
   function reset() {
     setIsPlaying(false);
     setHour(currentHourInNewYork()); // back to real "now," not a fixed demo hour
-  }
-
-  async function analyzeCanopyLight() {
-    if (!viewer) return;
-    setCanopyLightState("analyzing");
-    try {
-      const result = await analyzeCanopyLightFilter(viewer);
-      setCanopyLightResult(result);
-      setCanopyLightState("done");
-    } catch {
-      setCanopyLightState("error");
-    }
-  }
-
-  // Pure hemisphere geometry — unlike Canopy Light Filter this needs no
-  // real sun/shadow rendering to mean something, so it's available whether
-  // or not Start Analysis has been run. Reads the eye position from wherever
-  // the user has actually navigated the camera to (the window/balcony they
-  // walked to), same as Canopy Light Filter does for its own reading.
-  async function analyzeSkyView() {
-    if (!viewer) return;
-    setSkyViewState("analyzing");
-    try {
-      const result = await computeSkyViewFactor(viewer);
-      setSkyViewResult(result);
-      setSkyViewState("done");
-    } catch {
-      setSkyViewState("error");
-    }
   }
 
   // Real, reversible cinematic rendering — applies actual Cesium
@@ -470,7 +446,15 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
           <div className="sun-panel__body">
             <div className="sun-time">
               <div className="sun-compass-wrap">
-                <SunPathCompass azimuthDeg={sun.azimuthDeg} elevationDeg={sun.elevationDeg} timeLabel={formatHour(hour)} />
+                <SunPathCompass
+                  azimuthDeg={sun.azimuthDeg}
+                  elevationDeg={sun.elevationDeg}
+                  timeLabel={formatHour(hour)}
+                  onScrub={(h) => {
+                    setIsPlaying(false); // manual scrub takes over from auto-play
+                    setHour(h);
+                  }}
+                />
               </div>
               <div className="sun-time__row">
                 <button type="button" className="sun-start-btn" onClick={startPause}>
@@ -578,90 +562,6 @@ export function SunlightAnalysisPanel({ viewer, osmBuildings, vegetationLayer }:
                 <span>Peak Sunlight Time</span>
                 <span className="sun-info__value">{peakSample ? formatHour(peakSample.hour) : "—"}</span>
               </div>
-            </div>
-
-            <div>
-              <div className="sun-section-title">Canopy Light Filter (current view)</div>
-              {!isRunning && (
-                <div className="sun-canopy__hint">Start Analysis to enable — needs real sun/shadow rendering to read.</div>
-              )}
-              {isRunning && canopyLightState !== "done" && (
-                <button
-                  type="button"
-                  className="sun-canopy-btn"
-                  onClick={analyzeCanopyLight}
-                  disabled={canopyLightState === "analyzing"}
-                >
-                  {canopyLightState === "analyzing" ? "Reading current view…" : "🌳 Analyze Canopy Light Filter"}
-                </button>
-              )}
-              {canopyLightState === "error" && <div className="sun-canopy__hint">Couldn't read the view — try again.</div>}
-              {canopyLightState === "done" && canopyLightResult && (
-                <div className="sun-canopy-result">
-                  <div className="sun-canopy-bar">
-                    <div
-                      className="sun-canopy-bar__seg canopy"
-                      style={{ width: `${canopyLightResult.canopyFilteredPct}%` }}
-                      title={`Canopy-filtered: ${canopyLightResult.canopyFilteredPct}%`}
-                    />
-                    <div
-                      className="sun-canopy-bar__seg harsh"
-                      style={{ width: `${canopyLightResult.harshPct}%` }}
-                      title={`Harsh/hardscape: ${canopyLightResult.harshPct}%`}
-                    />
-                    <div
-                      className="sun-canopy-bar__seg shadow"
-                      style={{ width: `${canopyLightResult.shadowPct}%` }}
-                      title={`Shadow: ${canopyLightResult.shadowPct}%`}
-                    />
-                  </div>
-                  <div className="sun-canopy-legend">
-                    <span><i className="dot canopy" />Canopy-filtered {canopyLightResult.canopyFilteredPct}%</span>
-                    <span><i className="dot harsh" />Harsh/hardscape {canopyLightResult.harshPct}%</span>
-                    <span><i className="dot shadow" />Shadow {canopyLightResult.shadowPct}%</span>
-                  </div>
-                  <button type="button" className="sun-canopy-btn secondary" onClick={analyzeCanopyLight}>
-                    ↻ Re-analyze
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <div className="sun-section-title">Sky View Factor (current view)</div>
-              {skyViewState !== "done" && (
-                <button
-                  type="button"
-                  className="sky-view-btn"
-                  onClick={analyzeSkyView}
-                  disabled={skyViewState === "analyzing" || !viewer}
-                >
-                  {skyViewState === "analyzing" ? "Scanning the sky…" : "🌌 Analyze Sky View Factor"}
-                </button>
-              )}
-              {skyViewState === "error" && <div className="sun-canopy__hint">Couldn't read the view — try again.</div>}
-              {skyViewState === "done" && skyViewResult && (
-                <div className="sky-view-result">
-                  <div className="sky-view-grid-wrap">
-                    <SkyViewGrid grid={skyViewResult.grid} cols={skyViewResult.cols} rows={skyViewResult.rows} />
-                  </div>
-                  <div className="sun-info__row">
-                    <span>Open Sky</span>
-                    <span className="sun-info__value">{skyViewResult.svfPct}%</span>
-                  </div>
-                  <div className="sun-info__row">
-                    <span>Reads As</span>
-                    <span className="sun-info__value">{skyOpennessLabel(skyViewResult.svf)}</span>
-                  </div>
-                  <div className="sun-canopy__hint">
-                    Blue cells are open sky in the current view, laid out in the same position as what's on screen —
-                    dark cells are whatever blocks it: a building, the window's own frame, or tree canopy.
-                  </div>
-                  <button type="button" className="sun-canopy-btn secondary" onClick={analyzeSkyView}>
-                    ↻ Re-analyze
-                  </button>
-                </div>
-              )}
             </div>
 
           </div>

@@ -13,7 +13,29 @@ import { resumeUnfinishedOnBoot } from "./services/balconyGeneration/generationQ
 const app = express();
 const PORT = parseInt(process.env.PORT ?? "4100");
 
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
+// CORS_ORIGIN holds the fixed production origin(s) (comma-separated). Vercel
+// preview deployments get a fresh *.vercel.app origin per branch/deploy that
+// can never be listed in advance, so those are allowed independently of the
+// env var — otherwise every preview build's API calls are blocked by the
+// browser before they ever reach this server.
+const configuredOrigins = (process.env.CORS_ORIGIN ?? "*")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowAllOrigins = configuredOrigins.includes("*");
+const isVercelPreviewOrigin = (origin: string) => /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowAllOrigins || configuredOrigins.includes(origin) || isVercelPreviewOrigin(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
+  })
+);
 // Manual captures/regenerations carry base64 image data URLs (a 1280x720
 // JPEG preview + an optional mask image) — both comfortably clear Express's
 // 100kb JSON default, so this needs raising explicitly.
